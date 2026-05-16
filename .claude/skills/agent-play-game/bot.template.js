@@ -14,6 +14,13 @@ async (page) => {
   const p = await ctx.newPage();
   await p.goto('http://localhost:5173/');
   await p.waitForTimeout(1200);
+
+  const guestBtn = await p.$('.home .btn.ghost');
+  if (guestBtn) {
+    await guestBtn.click();
+    await p.waitForTimeout(600);
+  }
+
   const video = p.video();
 
   const start = Date.now();
