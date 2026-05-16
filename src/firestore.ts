@@ -15,7 +15,7 @@ import {
 import { getDbOrNull } from './firebase';
 import type { LeaderboardEntry, LeaderboardData } from './ui/overlays';
 
-export type Preferences = { sound: boolean; haptics: boolean };
+export type Preferences = { sound: boolean; haptics: boolean; bgm: boolean };
 
 export type UserProfile = {
   displayName: string;
@@ -26,7 +26,7 @@ export type UserProfile = {
   coins: number;
 };
 
-export const defaultPreferences = (): Preferences => ({ sound: true, haptics: true });
+export const defaultPreferences = (): Preferences => ({ sound: true, haptics: true, bgm: false });
 
 const SCORE_CAP = 1_000_000;
 
@@ -50,6 +50,7 @@ export const loadProfile = async (uid: string): Promise<UserProfile | null> => {
     preferences: {
       sound: data['preferences']?.sound ?? true,
       haptics: data['preferences']?.haptics ?? true,
+      bgm: data['preferences']?.bgm ?? false,
     },
     bestScore: data['bestScore'] ?? 0,
     coins: data['coins'] ?? 0,
@@ -132,6 +133,7 @@ export const mergeProfilesInto = async (
     const existingPrefs: Preferences = {
       sound: data['preferences']?.sound ?? true,
       haptics: data['preferences']?.haptics ?? true,
+      bgm: data['preferences']?.bgm ?? false,
     };
     const mergedBest = Math.max(existingBest, source.bestScore);
     const mergedCoins = Math.max(existingCoins, source.coins);

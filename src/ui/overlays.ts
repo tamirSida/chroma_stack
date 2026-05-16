@@ -136,10 +136,12 @@ export const showGameOver = (args: GameOverArgs) => {
 type SettingsArgs = {
   audio: boolean;
   haptics: boolean;
+  bgm: boolean;
   userLabel: string;
   isAnonymous: boolean;
   onToggleAudio: (v: boolean) => void;
   onToggleHaptics: (v: boolean) => void;
+  onToggleBgm: (v: boolean) => void;
   onSignIn: () => void;
   onSignOut: () => void;
 };
@@ -200,6 +202,7 @@ export const showSettings = (args: SettingsArgs) => {
   };
 
   card.appendChild(mkToggle('Sound', args.audio, args.onToggleAudio));
+  card.appendChild(mkToggle('Music', args.bgm, args.onToggleBgm));
   card.appendChild(mkToggle('Haptics', args.haptics, args.onToggleHaptics));
 
   const actions = document.createElement('div');

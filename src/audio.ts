@@ -65,6 +65,13 @@ export const primeAudio = () => {
   if (c && c.state === 'suspended') void c.resume();
 };
 
+export const getAudioCtx = (): AudioContext | null => ensureCtx();
+
+export const getDryBus = (): GainNode | null => {
+  ensureCtx();
+  return dryBus;
+};
+
 export const setAudioEnabled = (v: boolean) => {
   enabled = v;
 };

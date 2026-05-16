@@ -41,6 +41,7 @@ import {
   setAudioEnabled,
 } from './audio';
 import { buzz, setHapticsEnabled, isHapticsEnabled } from './haptics';
+import { isBgmEnabled, primeBgmIfWanted, setBgmEnabled } from './bgm';
 import {
   hideOverlay,
   showGameOver,
@@ -69,6 +70,7 @@ import { toast } from './ui/toast';
 const BEST_KEY = 'cascade.best.v1';
 const AUDIO_KEY = 'cascade.audio.v1';
 const HAPTICS_KEY = 'cascade.haptics.v1';
+const BGM_KEY = 'cascade.bgm.v1';
 const COINS_KEY = 'cascade.coins.v1';
 const COIN_PER_POINT = 0.1;
 
@@ -425,6 +427,7 @@ const restart = () => {
 
 const onDragStart = () => {
   primeAudio();
+  primeBgmIfWanted();
 };
 
 const humanError = (err: unknown): string => {
@@ -448,6 +451,7 @@ const openSettings = () => {
   showSettings({
     audio: isAudioEnabled(),
     haptics: isHapticsEnabled(),
+    bgm: isBgmEnabled(),
     userLabel: label,
     isAnonymous,
     onToggleAudio: (v) => {
@@ -459,6 +463,11 @@ const openSettings = () => {
       setHapticsEnabled(v);
       savePref(HAPTICS_KEY, v);
       if (firebaseEnabled()) void updatePreferences({ haptics: v }).catch(() => {});
+    },
+    onToggleBgm: (v) => {
+      setBgmEnabled(v);
+      savePref(BGM_KEY, v);
+      if (firebaseEnabled()) void updatePreferences({ bgm: v }).catch(() => {});
     },
     onSignIn: () => openSignIn('signup'),
     onSignOut: () => {
@@ -535,6 +544,10 @@ const syncFromAuth = () => {
     setHapticsEnabled(profile.preferences.haptics);
     savePref(HAPTICS_KEY, profile.preferences.haptics);
   }
+  if (profile.preferences.bgm !== isBgmEnabled()) {
+    setBgmEnabled(profile.preferences.bgm);
+    savePref(BGM_KEY, profile.preferences.bgm);
+  }
   if (needsBestPush) {
     void updateBestScoreIfHigher(state.best).catch(() => {});
   }
@@ -547,6 +560,7 @@ const boot = () => {
   initRender();
   setAudioEnabled(loadPref(AUDIO_KEY, true));
   setHapticsEnabled(loadPref(HAPTICS_KEY, true));
+  setBgmEnabled(loadPref(BGM_KEY, false));
   state = newGameState(loadBest(), loadCoins());
   gameStartBest = state.best;
   renderBoard(state);
