@@ -151,6 +151,7 @@ npm run preview          # serve the production build locally
 | 5 | High-variance score multipliers | [feat-5](features/feat-5-score-multipliers.md) | 0.5.0 |
 | 6 | Home screen (banner + login or guest) | [feat-6](features/feat-6-home-screen.md) | 0.6.2 |
 | 7 | UX polish — paint targeting + score prominence | [feat-7](features/feat-7-ux-polish.md) | 0.7.0 |
+| 8 | Onboarding overlay + in-game help | [feat-8](features/feat-8-onboarding.md) | 0.8.0 |
 
 ## Bot / video recording
 

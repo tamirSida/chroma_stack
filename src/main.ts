@@ -52,6 +52,7 @@ import {
   showSettings,
   showSignIn,
 } from './ui/overlays';
+import { runOnboardingDemo } from './ui/onboarding';
 import { applyPower, canUse, POWER_BY_ID, snapshotState, type PowerId } from './powers';
 import { firebaseEnabled } from './firebase';
 import {
@@ -76,6 +77,7 @@ const AUDIO_KEY = 'cascade.audio.v1';
 const HAPTICS_KEY = 'cascade.haptics.v1';
 const BGM_KEY = 'cascade.bgm.v1';
 const COINS_KEY = 'cascade.coins.v1';
+const HOWTO_SEEN_KEY = 'cascade.howto.seen.v1';
 const COIN_PER_POINT = 0.1;
 
 let state: GameState;
@@ -568,6 +570,25 @@ const openSignIn = (mode: 'signin' | 'signup', onAfterSuccess?: () => void) => {
   });
 };
 
+const openHowToPlay = (variant: 'first-run' | 'manual') => {
+  hideOverlay();
+  void runOnboardingDemo({
+    state,
+    variant,
+    onDone: () => {
+      try { localStorage.setItem(HOWTO_SEEN_KEY, '1'); } catch { /* */ }
+    },
+  });
+};
+
+const hasSeenHowTo = (): boolean => {
+  try {
+    return localStorage.getItem(HOWTO_SEEN_KEY) === '1';
+  } catch {
+    return true;
+  }
+};
+
 const openLeaderboard = () => {
   hideOverlay();
   if (!firebaseEnabled()) {
@@ -638,6 +659,7 @@ const boot = () => {
 
   document.getElementById('btn-settings')?.addEventListener('click', openSettings);
   document.getElementById('btn-leaderboard')?.addEventListener('click', openLeaderboard);
+  document.getElementById('btn-help')?.addEventListener('click', () => openHowToPlay('manual'));
 
   document.getElementById('board')?.addEventListener('click', (e) => {
     if (!paintTargeting) return;
@@ -695,6 +717,7 @@ const presentHomeIfNeeded = async () => {
   if (user && !user.isAnonymous) {
     const name = profile?.displayName || user.displayName || 'back';
     toast(`Welcome back, ${name}`);
+    if (!hasSeenHowTo()) openHowToPlay('first-run');
     return;
   }
 
@@ -705,6 +728,9 @@ const startGame = () => {
   primeAudio();
   primeBgmIfWanted();
   hideHome();
+  if (!hasSeenHowTo()) {
+    openHowToPlay('first-run');
+  }
 };
 
 const handleHomeChoice = (choice: HomeChoice) => {
