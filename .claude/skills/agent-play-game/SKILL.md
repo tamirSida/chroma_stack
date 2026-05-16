@@ -33,14 +33,20 @@ Cap duration at 600 seconds (10 min) to keep recording sizes sane; warn if the u
 1. `curl -s -o /dev/null -w "%{http_code}" http://localhost:5173/` — must return `200`. If not, tell the user to run `npm run dev` and stop.
 2. `ls ~/Library/Caches/ms-playwright/ffmpeg-*` — if no match, run `npx playwright install ffmpeg` (it's a ~1 MB download).
 
-## Run the bot
+## Run the bot — delegate to a Sonnet subagent
+
+Do **not** run the Playwright loop on the main (Opus) thread. The bot run is long, token-heavy, and decision-light — it's the textbook case for delegating to Sonnet.
 
 1. Read `.claude/skills/agent-play-game/bot.template.js` from the project.
 2. Substitute these placeholders in the file's text:
    - `{{BEHAVIOR}}` → the chosen behavior string (literal: `random`, `greedy`, or `smart`)
    - `{{SECONDS}}` → the duration in seconds as a number
    - `{{OUTPUT_PATH}}` → an absolute path like `/Users/<user>/dev/game/cascade-<behavior>-<timestamp>.webm` (use `pwd` + a `YYMMDD-HHMMSS` timestamp; never overwrite an existing file)
-3. Pass the substituted code to `mcp__playwright__browser_run_code_unsafe` (use the `code` parameter).
+3. Spawn an `Agent` with `subagent_type: claude` and **`model: sonnet`**. The agent's prompt must be fully self-contained — the subagent has no conversation history. Include:
+   - The substituted code block, ready to pass to `mcp__playwright__browser_run_code_unsafe`.
+   - One sentence telling it to call that tool with the code, wait for the result, and return the result JSON verbatim.
+   - The expected output path so the agent can confirm the file exists at the end.
+4. When the agent returns its result, surface that result back to the user. Do not re-run the bot on the main thread, even if the subagent fails.
 
 ## Report back
 
