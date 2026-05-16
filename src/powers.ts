@@ -54,6 +54,10 @@ export const applyPower = (
       state.score = snap.score;
       state.combo = snap.combo;
       state.coins = snap.coins;
+      state.vrCounter = snap.vrCounter;
+      state.nearMissStreak = snap.nearMissStreak;
+      state.placementsSinceLastClear = snap.placementsSinceLastClear;
+      state.combosBroken = snap.combosBroken;
       state.snapshot = null;
       break;
     }
@@ -123,5 +127,9 @@ export const snapshotState = (state: GameState): void => {
     score: state.score,
     combo: state.combo,
     coins: state.coins,
+    vrCounter: state.vrCounter,
+    nearMissStreak: state.nearMissStreak,
+    placementsSinceLastClear: state.placementsSinceLastClear,
+    combosBroken: state.combosBroken,
   };
 };

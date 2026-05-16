@@ -35,6 +35,7 @@ type GameOverArgs = {
   score: number;
   best: number;
   nearLines: number;
+  combosBroken: number;
   isNewBest: boolean;
   showSaveCta: boolean;
   onRestart: () => void;
@@ -69,6 +70,14 @@ export const showGameOver = (args: GameOverArgs) => {
     nearMiss.textContent = `So close — you were 1 cell away from clearing ${args.nearLines} more line${args.nearLines === 1 ? '' : 's'}.`;
   }
   card.appendChild(nearMiss);
+
+  if (args.combosBroken > 0) {
+    const combos = document.createElement('div');
+    combos.className = 'near-miss-line';
+    combos.style.color = 'var(--c-r)';
+    combos.textContent = `Combos broken: ${args.combosBroken}`;
+    card.appendChild(combos);
+  }
 
   const restart = () => {
     hideOverlay();

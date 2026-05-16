@@ -423,3 +423,37 @@ export const spawnFloat = (combo: number, monoLines = 0) => {
   );
   anim.onfinish = () => el.remove();
 };
+
+export const spawnHype = (text: string, color: string, delay = 0) => {
+  const el = document.createElement('div');
+  el.className = 'float hype';
+  el.textContent = text;
+  el.style.color = color;
+  boardEl.appendChild(el);
+  const anim = el.animate(
+    [
+      { transform: 'translate3d(-50%, 40%, 0) scale(0.5)', opacity: 0 },
+      { transform: 'translate3d(-50%, 30%, 0) scale(1.25)', opacity: 1, offset: 0.35 },
+      { transform: 'translate3d(-50%, 10%, 0) scale(1)', opacity: 1, offset: 0.75 },
+      { transform: 'translate3d(-50%, -10%, 0) scale(1)', opacity: 0 },
+    ],
+    { duration: 1100, delay, easing: 'cubic-bezier(0.2, 0.6, 0.2, 1)', fill: 'forwards' },
+  );
+  anim.onfinish = () => el.remove();
+};
+
+export const spawnComboLoss = (prevCombo: number) => {
+  const el = document.createElement('div');
+  el.className = 'float combo-loss';
+  el.textContent = `−COMBO × ${prevCombo}`;
+  boardEl.appendChild(el);
+  const anim = el.animate(
+    [
+      { transform: 'translate3d(-50%, -50%, 0) scale(0.9)', opacity: 0 },
+      { transform: 'translate3d(-50%, -65%, 0) scale(1.05)', opacity: 1, offset: 0.3 },
+      { transform: 'translate3d(-50%, -120%, 0) scale(0.95)', opacity: 0 },
+    ],
+    { duration: 700, easing: 'cubic-bezier(0.4, 0, 0.6, 1)' },
+  );
+  anim.onfinish = () => el.remove();
+};

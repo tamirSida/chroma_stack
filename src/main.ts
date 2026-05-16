@@ -11,6 +11,8 @@ import {
   shakeBoard,
   animateClear,
   spawnFloat,
+  spawnHype,
+  spawnComboLoss,
   setNearMiss,
   showTargetingBar,
   hideTargetingBar,
@@ -19,6 +21,7 @@ import {
 import { initInput, handleTrayPointerDown } from './input';
 import {
   newGameState,
+  newVrCounter,
   placeOnBoard,
   canPlace,
   detectClears,
@@ -239,22 +242,51 @@ const afterPowerUse = (id: PowerId, deducted: number) => {
   setNearMiss(findNearMiss(state.board).cells);
 };
 
+const processClear = (
+  result: { cells: Set<string>; fullRows: number[]; fullCols: number[]; monoLines: number },
+): { isCross: boolean; isSurge: boolean; isDryPity: boolean; isNearMissPity: boolean } => {
+  const isDryPity = state.placementsSinceLastClear >= 7;
+  const isNearMissPity = state.nearMissStreak >= 3;
+
+  state.combo += 1;
+  setBgmCombo(state.combo);
+
+  const isCross = result.fullRows.length >= 2 && result.fullCols.length >= 2;
+  state.vrCounter -= 1;
+  let isSurge = false;
+  if (state.vrCounter <= 0) {
+    isSurge = true;
+    state.vrCounter = newVrCounter();
+  }
+
+  let points = scoreClears(result, state.combo);
+  if (isCross) points *= 2;
+  if (isDryPity) points *= 2;
+  if (isSurge) points *= 3;
+  if (isNearMissPity) points += 75;
+  points = Math.round(points);
+
+  state.score += points;
+  earnCoinsFromScoreDelta(points);
+  state.placementsSinceLastClear = 0;
+  state.nearMissStreak = 0;
+
+  if (state.score > state.best) {
+    state.best = state.score;
+    saveBest(state.best);
+  }
+
+  return { isCross, isSurge, isDryPity, isNearMissPity };
+};
+
 const runClearsIfAny = () => {
   const result = detectClears(state.board);
   if (result.cells.size === 0) {
     wirePowers();
     return;
   }
-  state.combo += 1;
-  setBgmCombo(state.combo);
-  const prevBest = state.best;
-  const points = scoreClears(result, state.combo);
-  state.score += points;
-  earnCoinsFromScoreDelta(points);
-  if (state.score > state.best) {
-    state.best = state.score;
-    saveBest(state.best);
-  }
+  const flags = processClear(result);
+
   const colorMap = new Map<string, Color>();
   for (const key of result.cells) {
     const [rr, cc] = key.split(',').map(Number) as [number, number];
@@ -267,9 +299,10 @@ const runClearsIfAny = () => {
   );
   playClearSequence(steps, state.combo);
   if (result.monoLines > 0) playMono(state.combo, 0.08);
-  buzz(state.combo >= 3 || result.monoLines > 0 ? [20, 30, 20] : 10);
+  buzz(state.combo >= 3 || result.monoLines > 0 || flags.isSurge || flags.isCross ? [20, 30, 20] : 10);
   spawnFloat(state.combo, result.monoLines);
-  if (state.combo >= 3 || result.monoLines > 0) shakeBoard();
+  spawnBonusHype(flags);
+  if (state.combo >= 3 || result.monoLines > 0 || flags.isCross || flags.isSurge) shakeBoard();
 
   busy = true;
   const finalizeClear = animateClear(result.cells, colorMap);
@@ -283,7 +316,23 @@ const runClearsIfAny = () => {
     busy = false;
     afterTurn();
   }, 220);
-  void prevBest;
+};
+
+const spawnBonusHype = (flags: {
+  isCross: boolean;
+  isSurge: boolean;
+  isDryPity: boolean;
+  isNearMissPity: boolean;
+}) => {
+  if (flags.isCross) {
+    spawnHype('CASCADE!', 'var(--c-r)');
+  } else if (flags.isSurge) {
+    spawnHype('SURGE × 3', 'var(--c-y)');
+  } else if (flags.isDryPity) {
+    spawnHype('COMEBACK!', 'var(--accent)');
+  } else if (flags.isNearMissPity) {
+    spawnHype('+75', 'var(--c-g)');
+  }
 };
 
 const commitPlace = (idx: number, r: number, c: number) => {
@@ -304,15 +353,7 @@ const commitPlace = (idx: number, r: number, c: number) => {
   const result = detectClears(state.board);
 
   if (result.cells.size > 0) {
-    state.combo += 1;
-    setBgmCombo(state.combo);
-    const points = scoreClears(result, state.combo);
-    state.score += points;
-    earnCoinsFromScoreDelta(points);
-    if (state.score > state.best) {
-      state.best = state.score;
-      saveBest(state.best);
-    }
+    const flags = processClear(result);
 
     const colorMap = new Map<string, Color>();
     for (const key of result.cells) {
@@ -327,9 +368,10 @@ const commitPlace = (idx: number, r: number, c: number) => {
     );
     playClearSequence(steps, state.combo);
     if (result.monoLines > 0) playMono(state.combo, 0.08);
-    buzz(state.combo >= 3 || result.monoLines > 0 ? [20, 30, 20] : 10);
+    buzz(state.combo >= 3 || result.monoLines > 0 || flags.isCross || flags.isSurge ? [20, 30, 20] : 10);
     spawnFloat(state.combo, result.monoLines);
-    if (state.combo >= 3 || result.monoLines > 0) shakeBoard();
+    spawnBonusHype(flags);
+    if (state.combo >= 3 || result.monoLines > 0 || flags.isCross || flags.isSurge) shakeBoard();
 
     busy = true;
     const finalizeClear = animateClear(result.cells, colorMap);
@@ -345,6 +387,11 @@ const commitPlace = (idx: number, r: number, c: number) => {
       afterTurn();
     }, 220);
   } else {
+    state.placementsSinceLastClear += 1;
+    if (state.combo >= 3) {
+      spawnComboLoss(state.combo);
+      state.combosBroken += 1;
+    }
     state.combo = 1;
     setBgmCombo(1);
     renderScore(state);
@@ -362,12 +409,18 @@ const afterTurn = () => {
   setNearMiss(nm.cells);
   lastNearLines = nm.nearLines;
 
+  if (nm.nearLines > 0) {
+    state.nearMissStreak += 1;
+  } else {
+    state.nearMissStreak = 0;
+  }
+
   if (isGameOver(state)) {
     const finalScore = state.score;
     const best = state.best;
     const beatBest = best > gameStartBest;
     void handleGameOverSubmit(finalScore, beatBest);
-    presentGameOver(finalScore, best, lastNearLines, beatBest);
+    presentGameOver(finalScore, best, lastNearLines, state.combosBroken, beatBest);
   }
 };
 
@@ -386,6 +439,7 @@ const presentGameOver = (
   finalScore: number,
   best: number,
   nearLines: number,
+  combosBroken: number,
   beatBest: boolean,
 ) => {
   stopBgm();
@@ -396,6 +450,7 @@ const presentGameOver = (
     score: finalScore,
     best,
     nearLines,
+    combosBroken,
     isNewBest: beatBest,
     showSaveCta,
     onRestart: restart,

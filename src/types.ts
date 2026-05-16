@@ -32,6 +32,10 @@ export type GameState = {
   coins: number;
   pieceCounter: number;
   snapshot: GameSnapshot | null;
+  vrCounter: number;
+  nearMissStreak: number;
+  placementsSinceLastClear: number;
+  combosBroken: number;
 };
 
 export type GameSnapshot = {
@@ -40,6 +44,10 @@ export type GameSnapshot = {
   score: number;
   combo: number;
   coins: number;
+  vrCounter: number;
+  nearMissStreak: number;
+  placementsSinceLastClear: number;
+  combosBroken: number;
 };
 
 export type ClearResult = {

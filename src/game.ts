@@ -23,6 +23,8 @@ export const emptyBoard = (): Board => {
 
 export const cloneBoard = (b: Board): Board => b.map((row) => row.slice());
 
+const seedVrCounter = (): number => 6 + Math.floor(Math.random() * 9);
+
 export const newGameState = (best: number, coins: number): GameState => {
   const [a, b, c] = spawnTray(1);
   return {
@@ -34,8 +36,14 @@ export const newGameState = (best: number, coins: number): GameState => {
     coins,
     pieceCounter: 4,
     snapshot: null,
+    vrCounter: seedVrCounter(),
+    nearMissStreak: 0,
+    placementsSinceLastClear: 0,
+    combosBroken: 0,
   };
 };
+
+export const newVrCounter = seedVrCounter;
 
 export const refillTray = (s: GameState): void => {
   if (s.tray.every((p) => p === null)) {
@@ -121,10 +129,11 @@ export const detectClears = (board: Board): ClearResult => {
 };
 
 export const scoreClears = (result: ClearResult, combo: number): number => {
-  let base = result.cells.size * 10;
-  base += (result.fullRows.length + result.fullCols.length) * 50;
-  base += result.monoLines * 150;
-  return base * combo;
+  const cellPoints = result.cells.size * 10;
+  const linePoints = (result.fullRows.length + result.fullCols.length) * 50;
+  const monoBonus = result.monoLines * 150 * Math.pow(combo, 0.3);
+  const combinedBase = cellPoints + linePoints + monoBonus;
+  return Math.round(combinedBase * Math.pow(1.4, combo - 1));
 };
 
 export const clearCells = (board: Board, cells: Set<string>): void => {
