@@ -29,7 +29,17 @@ import {
   isGameOver,
 } from './game';
 import type { Color, GameState } from './types';
-import { primeAudio, playClearSequence, playBad, setAudioEnabled, isAudioEnabled } from './audio';
+import {
+  isAudioEnabled,
+  playBad,
+  playClearSequence,
+  playGameOver,
+  playMono,
+  playPlace,
+  playPower,
+  primeAudio,
+  setAudioEnabled,
+} from './audio';
 import { buzz, setHapticsEnabled, isHapticsEnabled } from './haptics';
 import {
   hideOverlay,
@@ -218,6 +228,7 @@ const afterPowerUse = (id: PowerId, deducted: number) => {
   }
   flashPower(id);
   buzz(15);
+  playPower();
   renderBoard(state);
   wireTray();
   renderScore(state);
@@ -251,7 +262,8 @@ const runClearsIfAny = () => {
     8,
     1 + result.fullRows.length + result.fullCols.length + result.monoLines,
   );
-  playClearSequence(steps);
+  playClearSequence(steps, state.combo);
+  if (result.monoLines > 0) playMono(state.combo, 0.08);
   buzz(state.combo >= 3 || result.monoLines > 0 ? [20, 30, 20] : 10);
   spawnFloat(state.combo, result.monoLines);
   if (state.combo >= 3 || result.monoLines > 0) shakeBoard();
@@ -284,6 +296,7 @@ const commitPlace = (idx: number, r: number, c: number) => {
   renderBoard(state);
   wireTray();
   wirePowers();
+  playPlace();
 
   const result = detectClears(state.board);
 
@@ -308,7 +321,8 @@ const commitPlace = (idx: number, r: number, c: number) => {
       8,
       1 + result.fullRows.length + result.fullCols.length + result.monoLines,
     );
-    playClearSequence(steps);
+    playClearSequence(steps, state.combo);
+    if (result.monoLines > 0) playMono(state.combo, 0.08);
     buzz(state.combo >= 3 || result.monoLines > 0 ? [20, 30, 20] : 10);
     spawnFloat(state.combo, result.monoLines);
     if (state.combo >= 3 || result.monoLines > 0) shakeBoard();
@@ -369,6 +383,7 @@ const presentGameOver = (
   nearLines: number,
   beatBest: boolean,
 ) => {
+  playGameOver();
   const { user } = getAuthState();
   const showSaveCta = firebaseEnabled() && !!user && user.isAnonymous && beatBest;
   showGameOver({
