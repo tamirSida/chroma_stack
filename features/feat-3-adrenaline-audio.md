@@ -145,9 +145,48 @@ layers cleanly on top — same master chain.
   of the thock is what makes it feel solid. Variation is reserved for the
   cascade-step pitch and the random-ish reverb-tail tail of mono.
 
+## v0.3.1 — building tones
+
+Audio now **escalates with combo** rather than playing the same hit every
+clear:
+
+- `playClearSequence(steps, combo)` takes the combo as a parameter. The
+  cascade's base pitch is offset by `(combo - 1) × 2` semitones (capped at
+  +12 = one octave), so each successive combo lifts the whole cascade up
+  a whole step. After ~6 chained clears you're up a full octave — the
+  player hears progression instead of repetition.
+- Each clear step also stacks **extra layers as combo rises**:
+  - **Combo ≥ 2** — adds a perfect-fifth saw on top (thickens the chord).
+  - **Combo ≥ 3** — adds a deep 50 → 25 Hz sub thump (chest-thump felt
+    through earbuds).
+  - **Combo ≥ 4** — adds a short noise transient at 4 kHz (white-noise
+    "snap" for the snare-roll feel).
+- `playMono(combo)` mirrors this build:
+  - **Combo ≥ 2** — sub-bass drop (already shipped in 0.3.0).
+  - **Combo ≥ 3** — two bell harmonics 2 and 3 octaves up the root, plus
+    a 5 kHz noise burst. This is the "shimmer" that turns a mono into a
+    *moment*.
+  - **Combo ≥ 5** — slow-attack sawtooth pad (0.18 s attack) that swells
+    underneath the rest, evoking a synth string lift.
+
+**Psych note.** The combo system is the only feedback channel where the
+*sound itself* tells the player they're playing well. Visual juice
+(shake, floats, combo number) is already heavy at combo ≥ 3; without
+matching audio escalation, the sonic landscape felt static while the
+visual one accelerated — disorienting. The +2-semitone-per-combo melodic
+lift is the same trick used by retro arcade games for high-score chains
+(Donkey Kong's points jingle, original Tetris's tetris flash) — it pegs
+the brain's reward to a *rising* tonal trajectory rather than a flat one.
+
+The +12-semitone cap prevents the pitch from getting comical at combo 7+.
+Past that point further layers stack (sub, fifth, noise, swell) but the
+base note holds, so the *quality* of the sound keeps growing without the
+pitch becoming squeaky.
+
 ## Files
 
-- [src/audio.ts](../src/audio.ts) — rewritten
-- [src/main.ts](../src/main.ts) — new sound hooks at `commitPlace`, clear
-  branch, game-over branch, `afterPowerUse`
-- [package.json](../package.json) — version bump to 0.3.0
+- [src/audio.ts](../src/audio.ts) — rewritten (0.3.0) + combo-scaled build (0.3.1)
+- [src/main.ts](../src/main.ts) — sound hooks at `commitPlace`, clear
+  branches, game-over branch, `afterPowerUse`; combo passed to
+  `playClearSequence` (0.3.1)
+- [package.json](../package.json) — 0.3.0 → 0.3.1
