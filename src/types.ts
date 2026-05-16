@@ -29,7 +29,17 @@ export type GameState = {
   score: number;
   combo: number;
   best: number;
+  coins: number;
   pieceCounter: number;
+  snapshot: GameSnapshot | null;
+};
+
+export type GameSnapshot = {
+  board: Board;
+  tray: [TraySlot, TraySlot, TraySlot];
+  score: number;
+  combo: number;
+  coins: number;
 };
 
 export type ClearResult = {

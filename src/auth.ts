@@ -109,6 +109,7 @@ export const initAuth = async (): Promise<void> => {
 const snapshotAnon = (user: User): {
   uid: string;
   bestScore: number;
+  coins: number;
   preferences: Preferences;
   displayName: string;
 } => {
@@ -116,6 +117,7 @@ const snapshotAnon = (user: User): {
   return {
     uid: user.uid,
     bestScore: profile?.bestScore ?? 0,
+    coins: profile?.coins ?? 0,
     preferences: profile?.preferences ?? defaultPreferences(),
     displayName: profile?.displayName ?? deriveDisplayName(user),
   };
@@ -279,6 +281,20 @@ export const updateBestScoreIfHigher = async (score: number): Promise<void> => {
   emit();
   try {
     await saveProfile(user.uid, { bestScore: score });
+  } catch {
+    /* no-op */
+  }
+};
+
+export const pushCoinsBalance = async (coins: number): Promise<void> => {
+  const user = state.user;
+  const profile = state.profile;
+  if (!user || !profile) return;
+  if (profile.coins === coins) return;
+  state = { ...state, profile: { ...profile, coins } };
+  emit();
+  try {
+    await saveProfile(user.uid, { coins });
   } catch {
     /* no-op */
   }

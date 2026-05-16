@@ -6,12 +6,16 @@ import {
   type GameState,
   type Piece,
 } from './types';
+import { POWER_DEFS, canUse, type PowerId } from './powers';
 
 let boardEl: HTMLElement;
 let trayEl: HTMLElement;
 let scoreEl: HTMLElement;
 let bestEl: HTMLElement;
 let comboEl: HTMLElement;
+let coinsEl: HTMLElement;
+let coinsNumEl: HTMLElement;
+let powersEl: HTMLElement;
 
 const cellEls: HTMLElement[][] = [];
 let activeParticles = 0;
@@ -24,6 +28,9 @@ export const initRender = () => {
   scoreEl = document.getElementById('score')!;
   bestEl = document.getElementById('best')!;
   comboEl = document.getElementById('combo')!;
+  coinsEl = document.getElementById('coins')!;
+  coinsNumEl = document.getElementById('coins-num')!;
+  powersEl = document.getElementById('powers')!;
   mountBoard();
 };
 
@@ -127,6 +134,57 @@ export const renderScore = (state: GameState) => {
   comboEl.classList.remove('hot', 'hotter');
   if (state.combo >= 5) comboEl.classList.add('hotter');
   else if (state.combo >= 3) comboEl.classList.add('hot');
+};
+
+export const renderCoins = (state: GameState, bump = false) => {
+  coinsNumEl.textContent = String(state.coins);
+  if (bump) {
+    coinsEl.classList.remove('bump');
+    void coinsEl.offsetWidth;
+    coinsEl.classList.add('bump');
+    setTimeout(() => coinsEl.classList.remove('bump'), 250);
+  }
+};
+
+export const renderPowers = (
+  state: GameState,
+  onUse: (id: PowerId, btn: HTMLElement) => void,
+) => {
+  powersEl.innerHTML = '';
+  for (const def of POWER_DEFS) {
+    const btn = document.createElement('button');
+    btn.className = 'power-btn';
+    btn.dataset.powerId = def.id;
+    btn.setAttribute('aria-label', `${def.label} (${def.cost} coins)`);
+    if (!canUse(state, def.id)) btn.classList.add('disabled');
+
+    const icon = document.createElement('span');
+    icon.className = 'power-icon';
+    icon.textContent = def.icon;
+    btn.appendChild(icon);
+
+    const label = document.createElement('span');
+    label.className = 'power-label';
+    label.textContent = def.label;
+    btn.appendChild(label);
+
+    const cost = document.createElement('span');
+    cost.className = 'power-cost';
+    cost.textContent = String(def.cost);
+    btn.appendChild(cost);
+
+    btn.addEventListener('click', () => onUse(def.id, btn));
+    powersEl.appendChild(btn);
+  }
+};
+
+export const flashPower = (id: PowerId) => {
+  const btn = powersEl.querySelector<HTMLElement>(`.power-btn[data-power-id="${id}"]`);
+  if (!btn) return;
+  btn.classList.remove('flash');
+  void btn.offsetWidth;
+  btn.classList.add('flash');
+  setTimeout(() => btn.classList.remove('flash'), 420);
 };
 
 export const flashScore = () => {

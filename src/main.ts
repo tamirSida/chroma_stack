@@ -4,6 +4,9 @@ import {
   renderBoard,
   renderTray,
   renderScore,
+  renderCoins,
+  renderPowers,
+  flashPower,
   flashScore,
   shakeBoard,
   animateClear,
@@ -27,16 +30,19 @@ import { primeAudio, playClearSequence, playBad, setAudioEnabled, isAudioEnabled
 import { buzz, setHapticsEnabled, isHapticsEnabled } from './haptics';
 import {
   hideOverlay,
+  showColorLinePicker,
   showGameOver,
   showLeaderboard,
   showSettings,
   showSignIn,
 } from './ui/overlays';
+import { applyPower, canUse, POWER_BY_ID, snapshotState, type PowerId } from './powers';
 import { firebaseEnabled } from './firebase';
 import {
   getAuthState,
   initAuth,
   onAuth,
+  pushCoinsBalance,
   resetPassword,
   signInWithEmail,
   signOutAndReanon,
@@ -51,6 +57,8 @@ import { toast } from './ui/toast';
 const BEST_KEY = 'cascade.best.v1';
 const AUDIO_KEY = 'cascade.audio.v1';
 const HAPTICS_KEY = 'cascade.haptics.v1';
+const COINS_KEY = 'cascade.coins.v1';
+const COIN_PER_POINT = 0.1;
 
 let state: GameState;
 let busy = false;
@@ -92,11 +100,141 @@ const saveBest = (best: number) => {
   }
 };
 
+const loadCoins = (): number => {
+  try {
+    const v = localStorage.getItem(COINS_KEY);
+    return v ? parseInt(v, 10) || 0 : 0;
+  } catch {
+    return 0;
+  }
+};
+
+const saveCoins = (coins: number) => {
+  try {
+    localStorage.setItem(COINS_KEY, String(coins));
+  } catch {
+    /* no-op */
+  }
+  if (firebaseEnabled()) void pushCoinsBalance(coins).catch(() => {});
+};
+
+let coinEarnAcc = 0;
+const earnCoinsFromScoreDelta = (delta: number) => {
+  if (delta <= 0) return 0;
+  coinEarnAcc += delta * COIN_PER_POINT;
+  const whole = Math.floor(coinEarnAcc);
+  if (whole <= 0) return 0;
+  coinEarnAcc -= whole;
+  state.coins += whole;
+  saveCoins(state.coins);
+  return whole;
+};
+
 const wireTray = () => {
   renderTray(state, (idx, e) => {
     if (busy) return;
     handleTrayPointerDown(idx, e);
   });
+};
+
+const wirePowers = () => {
+  renderPowers(state, (id) => {
+    if (busy) return;
+    handlePower(id);
+  });
+};
+
+const handlePower = (id: PowerId) => {
+  if (!canUse(state, id)) return;
+  const def = POWER_BY_ID.get(id)!;
+
+  if (id === 'colorLine') {
+    showColorLinePicker({
+      onConfirm: (axis, index, color) => {
+        if (!canUse(state, id)) return;
+        const ok = applyPower(state, id, { axis, index, color });
+        if (!ok) return;
+        afterPowerUse(id, def.cost);
+        runClearsIfAny();
+      },
+    });
+    return;
+  }
+
+  const prevScore = state.score;
+  const ok = applyPower(state, id);
+  if (!ok) return;
+
+  afterPowerUse(id, id === 'redo' ? 0 : def.cost);
+
+  if (id === 'redo') {
+    coinEarnAcc = 0;
+  } else {
+    void prevScore;
+  }
+
+  if (id === 'clearBoard' || id === 'shuffleBoard') {
+    runClearsIfAny();
+  }
+};
+
+const afterPowerUse = (id: PowerId, deducted: number) => {
+  if (id !== 'redo') {
+    saveCoins(state.coins);
+  }
+  flashPower(id);
+  buzz(15);
+  renderBoard(state);
+  wireTray();
+  renderScore(state);
+  renderCoins(state, deducted === 0);
+  wirePowers();
+  setNearMiss(findNearMiss(state.board).cells);
+};
+
+const runClearsIfAny = () => {
+  const result = detectClears(state.board);
+  if (result.cells.size === 0) {
+    wirePowers();
+    return;
+  }
+  state.combo += 1;
+  const prevBest = state.best;
+  const points = scoreClears(result, state.combo);
+  state.score += points;
+  earnCoinsFromScoreDelta(points);
+  if (state.score > state.best) {
+    state.best = state.score;
+    saveBest(state.best);
+  }
+  const colorMap = new Map<string, Color>();
+  for (const key of result.cells) {
+    const [rr, cc] = key.split(',').map(Number) as [number, number];
+    const cell = state.board[rr]![cc];
+    if (cell) colorMap.set(key, cell.color);
+  }
+  const steps = Math.min(
+    8,
+    1 + result.fullRows.length + result.fullCols.length + result.monoLines,
+  );
+  playClearSequence(steps);
+  buzz(state.combo >= 3 || result.monoLines > 0 ? [20, 30, 20] : 10);
+  spawnFloat(state.combo, result.monoLines);
+  if (state.combo >= 3 || result.monoLines > 0) shakeBoard();
+
+  busy = true;
+  const finalizeClear = animateClear(result.cells, colorMap);
+  window.setTimeout(() => {
+    clearCells(state.board, result.cells);
+    renderBoard(state);
+    finalizeClear();
+    renderScore(state);
+    renderCoins(state, true);
+    wirePowers();
+    busy = false;
+    afterTurn();
+  }, 220);
+  void prevBest;
 };
 
 const commitPlace = (idx: number, r: number, c: number) => {
@@ -105,10 +243,13 @@ const commitPlace = (idx: number, r: number, c: number) => {
   if (!piece) return;
   if (!canPlace(state.board, piece, r, c)) return;
 
+  snapshotState(state);
+
   placeOnBoard(state.board, piece, r, c);
   state.tray[idx] = null;
   renderBoard(state);
   wireTray();
+  wirePowers();
 
   const result = detectClears(state.board);
 
@@ -116,6 +257,7 @@ const commitPlace = (idx: number, r: number, c: number) => {
     state.combo += 1;
     const points = scoreClears(result, state.combo);
     state.score += points;
+    earnCoinsFromScoreDelta(points);
     if (state.score > state.best) {
       state.best = state.score;
       saveBest(state.best);
@@ -145,6 +287,8 @@ const commitPlace = (idx: number, r: number, c: number) => {
       renderBoard(state);
       finalizeClear();
       renderScore(state);
+      renderCoins(state, true);
+      wirePowers();
       busy = false;
       afterTurn();
     }, 220);
@@ -153,6 +297,7 @@ const commitPlace = (idx: number, r: number, c: number) => {
     renderScore(state);
     flashScore();
     playBad();
+    wirePowers();
     afterTurn();
   }
 };
@@ -214,13 +359,18 @@ const presentGameOver = (
 };
 
 const restart = () => {
-  state = newGameState(state?.best ?? loadBest());
+  const carriedBest = state?.best ?? loadBest();
+  const carriedCoins = state?.coins ?? loadCoins();
+  state = newGameState(carriedBest, carriedCoins);
   state.combo = 1;
   gameStartBest = state.best;
   busy = false;
+  coinEarnAcc = 0;
   renderBoard(state);
   renderScore(state);
+  renderCoins(state);
   wireTray();
+  wirePowers();
   setNearMiss(findNearMiss(state.board).cells);
 };
 
@@ -312,12 +462,21 @@ const syncFromAuth = () => {
   const { profile, isReady } = getAuthState();
   if (!isReady || !profile) return;
   let needsBestPush = false;
+  let needsCoinsPush = false;
   if (profile.bestScore > state.best) {
     state.best = profile.bestScore;
     saveBest(state.best);
     renderScore(state);
   } else if (state.best > profile.bestScore) {
     needsBestPush = true;
+  }
+  if (profile.coins > state.coins) {
+    state.coins = profile.coins;
+    try { localStorage.setItem(COINS_KEY, String(state.coins)); } catch { /* */ }
+    renderCoins(state);
+    wirePowers();
+  } else if (state.coins > profile.coins) {
+    needsCoinsPush = true;
   }
   if (profile.preferences.sound !== isAudioEnabled()) {
     setAudioEnabled(profile.preferences.sound);
@@ -330,17 +489,22 @@ const syncFromAuth = () => {
   if (needsBestPush) {
     void updateBestScoreIfHigher(state.best).catch(() => {});
   }
+  if (needsCoinsPush) {
+    void pushCoinsBalance(state.coins).catch(() => {});
+  }
 };
 
 const boot = () => {
   initRender();
   setAudioEnabled(loadPref(AUDIO_KEY, true));
   setHapticsEnabled(loadPref(HAPTICS_KEY, true));
-  state = newGameState(loadBest());
+  state = newGameState(loadBest(), loadCoins());
   gameStartBest = state.best;
   renderBoard(state);
   renderScore(state);
+  renderCoins(state);
   wireTray();
+  wirePowers();
   initInput(() => state, commitPlace, onDragStart);
   setNearMiss(findNearMiss(state.board).cells);
 

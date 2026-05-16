@@ -23,6 +23,7 @@ export type UserProfile = {
   isAnonymous: boolean;
   preferences: Preferences;
   bestScore: number;
+  coins: number;
 };
 
 export const defaultPreferences = (): Preferences => ({ sound: true, haptics: true });
@@ -51,6 +52,7 @@ export const loadProfile = async (uid: string): Promise<UserProfile | null> => {
       haptics: data['preferences']?.haptics ?? true,
     },
     bestScore: data['bestScore'] ?? 0,
+    coins: data['coins'] ?? 0,
   };
 };
 
@@ -78,6 +80,7 @@ export const ensureProfile = async (
     isAnonymous: defaults.isAnonymous,
     preferences: defaultPreferences(),
     bestScore: 0,
+    coins: 0,
   };
   await saveProfile(uid, profile);
   return profile;
@@ -85,7 +88,13 @@ export const ensureProfile = async (
 
 export const mergeProfilesInto = async (
   targetUid: string,
-  source: { uid: string; bestScore: number; preferences: Preferences; displayName: string },
+  source: {
+    uid: string;
+    bestScore: number;
+    coins: number;
+    preferences: Preferences;
+    displayName: string;
+  },
 ): Promise<UserProfile> => {
   const db = getDbOrNull();
   if (!db) {
@@ -95,6 +104,7 @@ export const mergeProfilesInto = async (
       isAnonymous: false,
       preferences: source.preferences,
       bestScore: source.bestScore,
+      coins: source.coins,
     };
   }
   return runTransaction(db, async (tx) => {
@@ -107,6 +117,7 @@ export const mergeProfilesInto = async (
         isAnonymous: false,
         preferences: source.preferences,
         bestScore: source.bestScore,
+        coins: source.coins,
       };
       tx.set(targetRef, {
         ...merged,
@@ -117,20 +128,24 @@ export const mergeProfilesInto = async (
     }
     const data = targetSnap.data();
     const existingBest: number = data['bestScore'] ?? 0;
+    const existingCoins: number = data['coins'] ?? 0;
     const existingPrefs: Preferences = {
       sound: data['preferences']?.sound ?? true,
       haptics: data['preferences']?.haptics ?? true,
     };
     const mergedBest = Math.max(existingBest, source.bestScore);
+    const mergedCoins = Math.max(existingCoins, source.coins);
     const merged: UserProfile = {
       displayName: data['displayName'] ?? source.displayName,
       email: data['email'] ?? null,
       isAnonymous: false,
       preferences: existingPrefs,
       bestScore: mergedBest,
+      coins: mergedCoins,
     };
     tx.update(targetRef, {
       bestScore: mergedBest,
+      coins: mergedCoins,
       isAnonymous: false,
       updatedAt: serverTimestamp(),
     });

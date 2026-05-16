@@ -23,7 +23,7 @@ export const emptyBoard = (): Board => {
 
 export const cloneBoard = (b: Board): Board => b.map((row) => row.slice());
 
-export const newGameState = (best: number): GameState => {
+export const newGameState = (best: number, coins: number): GameState => {
   const [a, b, c] = spawnTray(1);
   return {
     board: emptyBoard(),
@@ -31,7 +31,9 @@ export const newGameState = (best: number): GameState => {
     score: 0,
     combo: 1,
     best,
+    coins,
     pieceCounter: 4,
+    snapshot: null,
   };
 };
 
