@@ -41,7 +41,7 @@ Do **not** run the Playwright loop on the main (Opus) thread. The bot run is lon
 2. Substitute these placeholders in the file's text:
    - `{{BEHAVIOR}}` → the chosen behavior string (literal: `random`, `greedy`, or `smart`)
    - `{{SECONDS}}` → the duration in seconds as a number
-   - `{{OUTPUT_PATH}}` → an absolute path like `/Users/<user>/dev/game/cascade-<behavior>-<timestamp>.webm` (use `pwd` + a `YYMMDD-HHMMSS` timestamp; never overwrite an existing file)
+   - `{{OUTPUT_PATH}}` → an absolute path **inside the project's `playwright-media/` directory**, like `/Users/<user>/dev/game/playwright-media/cascade-<behavior>-<timestamp>.webm` (use `pwd` + a `YYMMDD-HHMMSS` timestamp; never overwrite an existing file). Create `playwright-media/` first if it doesn't exist — but it should already be there.
 3. Spawn an `Agent` with `subagent_type: claude` and **`model: sonnet`**. The agent's prompt must be fully self-contained — the subagent has no conversation history. Include:
    - The substituted code block, ready to pass to `mcp__playwright__browser_run_code_unsafe`.
    - One sentence telling it to call that tool with the code, wait for the result, and return the result JSON verbatim.
