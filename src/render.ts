@@ -198,7 +198,7 @@ export const setNearMiss = (cells: Set<string>) => {
   }
 };
 
-export const animateClear = (cells: Set<string>, colorMap: Map<string, Color>) => {
+export const animateClear = (cells: Set<string>, colorMap: Map<string, Color>): (() => void) => {
   const targets: { r: number; c: number; color: Color }[] = [];
   for (const key of cells) {
     const [r, c] = parseKey(key);
@@ -206,24 +206,22 @@ export const animateClear = (cells: Set<string>, colorMap: Map<string, Color>) =
     if (!color) continue;
     targets.push({ r, c, color });
   }
+  const anims: Animation[] = [];
   for (const { r, c, color } of targets) {
     const el = cellEls[r]![c]!;
-    el.animate(
+    const anim = el.animate(
       [
         { transform: 'scale(1)', opacity: 1 },
         { transform: 'scale(0.2)', opacity: 0 },
       ],
       { duration: 200, easing: 'ease-out', fill: 'forwards' },
     );
+    anims.push(anim);
     spawnParticles(r, c, color);
   }
-  setTimeout(() => {
-    for (const { r, c } of targets) {
-      const el = cellEls[r]![c]!;
-      el.style.transform = '';
-      el.style.opacity = '';
-    }
-  }, 220);
+  return () => {
+    for (const a of anims) a.cancel();
+  };
 };
 
 const spawnParticles = (r: number, c: number, color: Color) => {

@@ -93,7 +93,10 @@ const saveBest = (best: number) => {
 };
 
 const wireTray = () => {
-  renderTray(state, handleTrayPointerDown);
+  renderTray(state, (idx, e) => {
+    if (busy) return;
+    handleTrayPointerDown(idx, e);
+  });
 };
 
 const commitPlace = (idx: number, r: number, c: number) => {
@@ -135,11 +138,12 @@ const commitPlace = (idx: number, r: number, c: number) => {
     if (state.combo >= 3) shakeBoard();
 
     busy = true;
-    animateClear(result.cells, colorMap);
+    const finalizeClear = animateClear(result.cells, colorMap);
 
     window.setTimeout(() => {
       clearCells(state.board, result.cells);
       renderBoard(state);
+      finalizeClear();
       renderScore(state);
       busy = false;
       afterTurn();
