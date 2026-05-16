@@ -1,6 +1,6 @@
 # feat-4: arcade background music
 
-**Version:** 0.4.0
+**Version:** 0.4.2
 **Status:** shipped
 **Date:** 2026-05-16
 
@@ -126,6 +126,85 @@ and *off/on* covers 95% of the variance.
 - **No external mp3/ogg files.** Procedural keeps payload at zero and
   lets us mutate patterns generatively (e.g., key change with combo)
   later if we want.
+
+## v0.4.1 — research-driven refinement
+
+A Sonnet research subagent did a deep pass on music-psychology literature
+(Husain 2002, Karageorghis & Priest 2012, Margulis 2014, Salimpoor
+2011/2019, Jakubowski 2017, iMUSE/NecroDancer/Hooktheory industry analyses)
+and produced seven prioritised changes. All seven are now shipped:
+
+1. **Key: A natural minor → A Dorian.** Every `F` in patterns becomes `F#`
+   (MIDI 41 → 42 in bass, 78 added as a Dorian color tone in leads). The
+   raised 6th preserves minor urgency but adds the brightness that
+   Husain et al. show correlates with longer engagement on cognitive
+   tasks. Single most impactful change for least code.
+
+2. **Tempo: 140 → 124 BPM.** Karageorghis's stimulative band is 120–140;
+   for *decision-density-heavy* play (this game), the upper end pushes
+   players into Yerkes-Dodson over-arousal. 124 also leaves headroom for
+   the combo-triggered layer to feel like a tempo lift by contrast.
+   Candy Crush ships at ~115–120 BPM (Hooktheory analysis).
+
+3. **Loop variety: 4×4 → 6×6 + 4 pad patterns.** Bass and lead each get
+   6 hand-crafted bars rotating out-of-phase; the new pad voice has 4.
+   That's 6 × 6 × 4 = 144 bar-combinations before exact repetition,
+   well past Margulis's ~60–90s conscious-loop-detection threshold for
+   attentive listeners.
+
+4. **Combo-triggered vertical layer.** A counter-melody pad voice activates
+   when `state.combo >= 3` and fades in over 500 ms; on a combo break it
+   fades out over 2 s. iMUSE-style smallest-possible reaction that
+   creates the "the game sees me" feeling. `setBgmCombo(combo)` is
+   called from `main.ts` at every combo mutation site.
+
+5. **Drums redesigned for phone speakers.** Old square-wave kick fought
+   the square-wave bass in the same 80–400 Hz band, collapsing to mud on
+   mono phone speakers. New design: kick is a sine transient sweeping
+   150 → 60 Hz plus a 25 ms noise gate; snare is a 200 Hz square body +
+   200 Hz bandpass-noise body + a 4 kHz HF crack. Kick fundamental now
+   sits at ~150–200 Hz where phone speakers actually reproduce, separate
+   from the 80–100 Hz bass.
+
+6. **8-bar micro-tension cycle.** Every 8th bar replaces the active bass
+   pattern with a `PEDAL_BASS` — root held twice with no walking motion.
+   Combined with the lead continuing over the pedal, this creates the
+   anticipatory-dopamine peak (Salimpoor caudate burst) before the
+   release back into bar 0's motion at the next phrase start.
+
+7. **Earworm-spec primary lead motif.** The lead pattern at index 0 now
+   meets Jakubowski's criteria: 6–7 notes (was 8 evenly spaced), arch
+   contour (A4 → C5 → E5 → F#5 → E5 → D5 → C5 → A4 — peak at the
+   Dorian color tone), a P5 leap (A → E5), and a repeated rhythmic cell
+   on slots 0/4/8/12. Players in partial-attention states (i.e., focused
+   on the puzzle) form earworms most easily of all listening contexts.
+
+**What the research told us NOT to do** (and we honoured):
+- No combo-tempo-coupling (mismatched arousal vs. unchanged game clock).
+- No separate menu/highscore track (kills the mere-exposure → recall pathway).
+- No mid-range pads or wide synth strings in the 500 Hz–4 kHz band (would
+  fight SFX on the shared compressor and create ducking artifacts).
+
+## v0.4.2 — silence on game over
+
+Music cuts immediately when the game-over overlay appears, and resumes on
+restart (if the user still has it toggled on).
+
+- `presentGameOver()` in [main.ts](../src/main.ts) now calls `stopBgm()`
+  before `playGameOver()`. The game-over arpeggio plays into the silence
+  the BGM left, giving the descending tone its full perceptual weight
+  instead of fighting the still-running loop.
+- `restart()` calls `primeBgmIfWanted()` so the music starts again the
+  moment the new game begins, no extra user gesture needed (the restart
+  tap is itself a user gesture, so the audio context is unsuspended).
+- `stopBgm` re-exported from [bgm.ts](../src/bgm.ts).
+
+**Why.** The game-over SFX is the most emotionally weighted single sound
+in the game — falling tones, long reverb tails, the "this run is over"
+signal. Music continuing through it muddies the moment. Silence on the
+final breath makes the descending arpeggio land harder, and the music
+*returning* on restart reads as "fresh start, new lap" rather than the
+old loop just continuing.
 
 ## Files
 

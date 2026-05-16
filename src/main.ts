@@ -41,7 +41,7 @@ import {
   setAudioEnabled,
 } from './audio';
 import { buzz, setHapticsEnabled, isHapticsEnabled } from './haptics';
-import { isBgmEnabled, primeBgmIfWanted, setBgmEnabled } from './bgm';
+import { isBgmEnabled, primeBgmIfWanted, setBgmCombo, setBgmEnabled, stopBgm } from './bgm';
 import {
   hideOverlay,
   showGameOver,
@@ -246,6 +246,7 @@ const runClearsIfAny = () => {
     return;
   }
   state.combo += 1;
+  setBgmCombo(state.combo);
   const prevBest = state.best;
   const points = scoreClears(result, state.combo);
   state.score += points;
@@ -304,6 +305,7 @@ const commitPlace = (idx: number, r: number, c: number) => {
 
   if (result.cells.size > 0) {
     state.combo += 1;
+    setBgmCombo(state.combo);
     const points = scoreClears(result, state.combo);
     state.score += points;
     earnCoinsFromScoreDelta(points);
@@ -344,6 +346,7 @@ const commitPlace = (idx: number, r: number, c: number) => {
     }, 220);
   } else {
     state.combo = 1;
+    setBgmCombo(1);
     renderScore(state);
     flashScore();
     playBad();
@@ -385,6 +388,7 @@ const presentGameOver = (
   nearLines: number,
   beatBest: boolean,
 ) => {
+  stopBgm();
   playGameOver();
   const { user } = getAuthState();
   const showSaveCta = firebaseEnabled() && !!user && user.isAnonymous && beatBest;
@@ -414,6 +418,8 @@ const restart = () => {
   const carriedCoins = state?.coins ?? loadCoins();
   state = newGameState(carriedBest, carriedCoins);
   state.combo = 1;
+  setBgmCombo(1);
+  primeBgmIfWanted();
   gameStartBest = state.best;
   busy = false;
   coinEarnAcc = 0;
