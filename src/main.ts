@@ -23,16 +23,39 @@ import {
   isGameOver,
 } from './game';
 import type { Color, GameState } from './types';
-import { primeAudio, playClearSequence, playBad } from './audio';
-import { buzz } from './haptics';
+import { primeAudio, playClearSequence, playBad, setAudioEnabled, isAudioEnabled } from './audio';
+import { buzz, setHapticsEnabled, isHapticsEnabled } from './haptics';
+import { hideOverlay, showGameOver, showSettings } from './ui/overlays';
 
 const BEST_KEY = 'cascade.best.v1';
+const AUDIO_KEY = 'cascade.audio.v1';
+const HAPTICS_KEY = 'cascade.haptics.v1';
 
 let state: GameState;
 let busy = false;
 let lastNearLines = 0;
-let onGameOver: ((score: number, best: number, nearLines: number, isNewBest: boolean) => void) | null = null;
+let externalGameOver:
+  | ((score: number, best: number, nearLines: number, isNewBest: boolean) => void)
+  | null = null;
 let onScoreCommitted: ((score: number, best: number, isNewBest: boolean) => void) | null = null;
+
+const loadPref = (key: string, def: boolean): boolean => {
+  try {
+    const v = localStorage.getItem(key);
+    if (v === null) return def;
+    return v === '1';
+  } catch {
+    return def;
+  }
+};
+
+const savePref = (key: string, value: boolean) => {
+  try {
+    localStorage.setItem(key, value ? '1' : '0');
+  } catch {
+    /* no-op */
+  }
+};
 
 const loadBest = (): number => {
   try {
@@ -129,7 +152,20 @@ const afterTurn = (isNewBest: boolean) => {
   if (isGameOver(state)) {
     const finalScore = state.score;
     const best = state.best;
-    if (onGameOver) onGameOver(finalScore, best, lastNearLines, isNewBest);
+    if (externalGameOver) {
+      externalGameOver(finalScore, best, lastNearLines, isNewBest);
+    } else {
+      showGameOver({
+        score: finalScore,
+        best,
+        nearLines: lastNearLines,
+        isNewBest,
+        showSaveCta: false,
+        onRestart: restart,
+        onSignInGoogle: () => {},
+        onSignInEmail: () => {},
+      });
+    }
   }
 };
 
@@ -152,7 +188,7 @@ export const getStateRef = () => state;
 export const setOnGameOver = (
   cb: (score: number, best: number, nearLines: number, isNewBest: boolean) => void,
 ) => {
-  onGameOver = cb;
+  externalGameOver = cb;
 };
 
 export const setOnScoreCommitted = (
@@ -161,14 +197,65 @@ export const setOnScoreCommitted = (
   onScoreCommitted = cb;
 };
 
+let settingsHooks: {
+  onSignIn: () => void;
+  onSignOut: () => void;
+  getUserLabel: () => { label: string; isAnonymous: boolean };
+} = {
+  onSignIn: () => {},
+  onSignOut: () => {},
+  getUserLabel: () => ({ label: 'Guest', isAnonymous: true }),
+};
+
+let leaderboardOpener: () => void = () => {};
+
+export const setSettingsHooks = (hooks: typeof settingsHooks) => {
+  settingsHooks = hooks;
+};
+
+export const setLeaderboardOpener = (fn: () => void) => {
+  leaderboardOpener = fn;
+};
+
+const openSettings = () => {
+  hideOverlay();
+  const { label, isAnonymous } = settingsHooks.getUserLabel();
+  showSettings({
+    audio: isAudioEnabled(),
+    haptics: isHapticsEnabled(),
+    userLabel: label,
+    isAnonymous,
+    onToggleAudio: (v) => {
+      setAudioEnabled(v);
+      savePref(AUDIO_KEY, v);
+    },
+    onToggleHaptics: (v) => {
+      setHapticsEnabled(v);
+      savePref(HAPTICS_KEY, v);
+    },
+    onSignIn: () => settingsHooks.onSignIn(),
+    onSignOut: () => settingsHooks.onSignOut(),
+  });
+};
+
+const openLeaderboard = () => {
+  hideOverlay();
+  leaderboardOpener();
+};
+
 export const boot = () => {
   initRender();
+  setAudioEnabled(loadPref(AUDIO_KEY, true));
+  setHapticsEnabled(loadPref(HAPTICS_KEY, true));
   state = newGameState(loadBest());
   renderBoard(state);
   renderScore(state);
   wireTray();
   initInput(() => state, commitPlace, onDragStart);
   setNearMiss(findNearMiss(state.board).cells);
+
+  document.getElementById('btn-settings')?.addEventListener('click', openSettings);
+  document.getElementById('btn-leaderboard')?.addEventListener('click', openLeaderboard);
 
   document.addEventListener('contextmenu', (e) => e.preventDefault());
   document.addEventListener('gesturestart', (e) => e.preventDefault());
