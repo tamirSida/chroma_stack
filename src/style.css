@@ -668,6 +668,13 @@ button {
 .btn.google {
   background: #fff;
   color: #1a1a2e;
+  gap: 10px;
+}
+
+.google-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
 }
 
 .btn-row {
@@ -858,6 +865,91 @@ button {
   color: rgba(255, 255, 255, 0.6);
   background: rgba(255, 255, 255, 0.06);
   font-size: 18px;
+}
+
+.home {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding:
+    calc(var(--safe-top) + 24px)
+    calc(var(--safe-right) + 24px)
+    calc(var(--safe-bottom) + 24px)
+    calc(var(--safe-left) + 24px);
+  background: radial-gradient(ellipse at center, #1a1a2e 0%, #050510 80%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+  gap: 16px;
+}
+
+.home.shown {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.home.exiting {
+  opacity: 0;
+  transform: translate3d(0, -1.5%, 0);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.home-hero {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 420px;
+  max-height: 60vh;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.45));
+}
+
+.home-tagline {
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 700;
+}
+
+.home-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.home-buttons .btn {
+  width: 100%;
+  min-height: 52px;
+}
+
+.btn.ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.btn.ghost:active {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.home-note {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
+  max-width: 320px;
+}
+
+@media (min-width: 720px) {
+  .home-hero { max-width: 480px; max-height: 70vh; }
+  .home-buttons { max-width: 380px; }
 }
 
 .toast {

@@ -1,3 +1,5 @@
+import { setButtonGoogleLabel } from './icons';
+
 type CloseHandler = () => void;
 
 let overlayEl: HTMLElement | null = null;
@@ -107,7 +109,7 @@ export const showGameOver = (args: GameOverArgs) => {
 
     const google = document.createElement('button');
     google.className = 'btn google';
-    google.textContent = 'Continue with Google';
+    setButtonGoogleLabel(google, 'Continue with Google');
     google.addEventListener('click', (e) => {
       e.stopPropagation();
       args.onSignInGoogle();
@@ -418,7 +420,7 @@ export const showSignIn = (args: SignInArgs) => {
 
   const googleBtn = document.createElement('button');
   googleBtn.className = 'btn google';
-  googleBtn.textContent = 'Continue with Google';
+  setButtonGoogleLabel(googleBtn, 'Continue with Google');
   googleBtn.style.marginBottom = '10px';
   card.appendChild(googleBtn);
 

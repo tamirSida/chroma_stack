@@ -69,6 +69,7 @@ import {
 } from './auth';
 import { fetchLeaderboard, submitScore } from './firestore';
 import { toast } from './ui/toast';
+import { hideHome, showHome, type HomeChoice } from './ui/home';
 
 const BEST_KEY = 'cascade.best.v1';
 const AUDIO_KEY = 'cascade.audio.v1';
@@ -538,7 +539,7 @@ const openSettings = () => {
   });
 };
 
-const openSignIn = (mode: 'signin' | 'signup') => {
+const openSignIn = (mode: 'signin' | 'signup', onAfterSuccess?: () => void) => {
   if (!firebaseEnabled()) {
     toast('Sign-in isn\'t configured yet.');
     return;
@@ -549,14 +550,17 @@ const openSignIn = (mode: 'signin' | 'signup') => {
     onGoogle: async () => {
       await upgradeWithGoogle();
       toast('Signed in. Welcome!');
+      onAfterSuccess?.();
     },
     onEmailSignUp: async (email, password) => {
       await upgradeWithEmail(email, password);
       toast('Account created. Verification email sent.');
+      onAfterSuccess?.();
     },
     onEmailSignIn: async (email, password) => {
       await signInWithEmail(email, password);
       toast('Welcome back!');
+      onAfterSuccess?.();
     },
     onPasswordReset: async (email) => {
       await resetPassword(email);
@@ -658,6 +662,48 @@ const boot = () => {
   if (firebaseEnabled()) {
     onAuth(() => syncFromAuth());
     void initAuth();
+  }
+
+  showHome({
+    firebaseEnabled: firebaseEnabled(),
+    onChoice: handleHomeChoice,
+  });
+};
+
+const startGame = () => {
+  primeAudio();
+  primeBgmIfWanted();
+  hideHome();
+};
+
+const handleHomeChoice = (choice: HomeChoice) => {
+  if (choice === 'guest') {
+    startGame();
+    return;
+  }
+  if (choice === 'google') {
+    if (!firebaseEnabled()) {
+      toast('Sign-in isn\'t configured yet.');
+      return;
+    }
+    primeAudio();
+    void (async () => {
+      try {
+        await upgradeWithGoogle();
+        toast('Signed in. Welcome!');
+        startGame();
+      } catch (err) {
+        toast(humanError(err));
+      }
+    })();
+    return;
+  }
+  if (choice === 'email') {
+    if (!firebaseEnabled()) {
+      toast('Sign-in isn\'t configured yet.');
+      return;
+    }
+    openSignIn('signup', () => startGame());
   }
 };
 
