@@ -25,7 +25,28 @@ import {
 import type { Color, GameState } from './types';
 import { primeAudio, playClearSequence, playBad, setAudioEnabled, isAudioEnabled } from './audio';
 import { buzz, setHapticsEnabled, isHapticsEnabled } from './haptics';
-import { hideOverlay, showGameOver, showSettings } from './ui/overlays';
+import {
+  hideOverlay,
+  showGameOver,
+  showLeaderboard,
+  showSettings,
+  showSignIn,
+} from './ui/overlays';
+import { firebaseEnabled } from './firebase';
+import {
+  getAuthState,
+  initAuth,
+  onAuth,
+  resetPassword,
+  signInWithEmail,
+  signOutAndReanon,
+  updateBestScoreIfHigher,
+  updatePreferences,
+  upgradeWithEmail,
+  upgradeWithGoogle,
+} from './auth';
+import { fetchLeaderboard, submitScore } from './firestore';
+import { toast } from './ui/toast';
 
 const BEST_KEY = 'cascade.best.v1';
 const AUDIO_KEY = 'cascade.audio.v1';
@@ -34,10 +55,7 @@ const HAPTICS_KEY = 'cascade.haptics.v1';
 let state: GameState;
 let busy = false;
 let lastNearLines = 0;
-let externalGameOver:
-  | ((score: number, best: number, nearLines: number, isNewBest: boolean) => void)
-  | null = null;
-let onScoreCommitted: ((score: number, best: number, isNewBest: boolean) => void) | null = null;
+let gameStartBest = 0;
 
 const loadPref = (key: string, def: boolean): boolean => {
   try {
@@ -93,14 +111,11 @@ const commitPlace = (idx: number, r: number, c: number) => {
 
   if (result.cells.size > 0) {
     state.combo += 1;
-    const prevBest = state.best;
     const points = scoreClears(result, state.combo);
     state.score += points;
-    let isNewBest = false;
     if (state.score > state.best) {
       state.best = state.score;
       saveBest(state.best);
-      isNewBest = state.score > prevBest;
     }
 
     const colorMap = new Map<string, Color>();
@@ -122,60 +137,82 @@ const commitPlace = (idx: number, r: number, c: number) => {
     busy = true;
     animateClear(result.cells, colorMap);
 
-    setTimeout(() => {
+    window.setTimeout(() => {
       clearCells(state.board, result.cells);
       renderBoard(state);
       renderScore(state);
       busy = false;
-      afterTurn(isNewBest);
+      afterTurn();
     }, 220);
   } else {
     state.combo = 1;
     renderScore(state);
     flashScore();
     playBad();
-    afterTurn(false);
+    afterTurn();
   }
 };
 
-const afterTurn = (isNewBest: boolean) => {
+const afterTurn = () => {
   refillTray(state);
   wireTray();
   const nm = findNearMiss(state.board);
   setNearMiss(nm.cells);
   lastNearLines = nm.nearLines;
 
-  if (onScoreCommitted) {
-    onScoreCommitted(state.score, state.best, isNewBest);
-  }
-
   if (isGameOver(state)) {
     const finalScore = state.score;
     const best = state.best;
-    if (externalGameOver) {
-      externalGameOver(finalScore, best, lastNearLines, isNewBest);
-    } else {
-      showGameOver({
-        score: finalScore,
-        best,
-        nearLines: lastNearLines,
-        isNewBest,
-        showSaveCta: false,
-        onRestart: restart,
-        onSignInGoogle: () => {},
-        onSignInEmail: () => {},
-      });
-    }
+    const beatBest = best > gameStartBest;
+    void handleGameOverSubmit(finalScore, beatBest);
+    presentGameOver(finalScore, best, lastNearLines, beatBest);
   }
 };
 
-const onDragStart = () => {
-  primeAudio();
+const handleGameOverSubmit = async (finalScore: number, beatBest: boolean) => {
+  if (!firebaseEnabled()) return;
+  const { user, profile } = getAuthState();
+  if (!user || !profile) return;
+  if (finalScore <= 0) return;
+  if (beatBest) {
+    await updateBestScoreIfHigher(finalScore).catch(() => {});
+  }
+  await submitScore(user.uid, profile.displayName, finalScore).catch(() => {});
 };
 
-export const restart = () => {
+const presentGameOver = (
+  finalScore: number,
+  best: number,
+  nearLines: number,
+  beatBest: boolean,
+) => {
+  const { user } = getAuthState();
+  const showSaveCta = firebaseEnabled() && !!user && user.isAnonymous && beatBest;
+  showGameOver({
+    score: finalScore,
+    best,
+    nearLines,
+    isNewBest: beatBest,
+    showSaveCta,
+    onRestart: restart,
+    onSignInGoogle: () => {
+      void (async () => {
+        try {
+          await upgradeWithGoogle();
+          toast('Signed in. Your score is saved.');
+        } catch (err) {
+          toast(humanError(err));
+        }
+      })();
+    },
+    onSignInEmail: () => openSignIn('signup'),
+  });
+};
+
+const restart = () => {
   state = newGameState(state?.best ?? loadBest());
   state.combo = 1;
+  gameStartBest = state.best;
   busy = false;
   renderBoard(state);
   renderScore(state);
@@ -183,43 +220,28 @@ export const restart = () => {
   setNearMiss(findNearMiss(state.board).cells);
 };
 
-export const getStateRef = () => state;
-
-export const setOnGameOver = (
-  cb: (score: number, best: number, nearLines: number, isNewBest: boolean) => void,
-) => {
-  externalGameOver = cb;
+const onDragStart = () => {
+  primeAudio();
 };
 
-export const setOnScoreCommitted = (
-  cb: (score: number, best: number, isNewBest: boolean) => void,
-) => {
-  onScoreCommitted = cb;
+const humanError = (err: unknown): string => {
+  if (err && typeof err === 'object' && 'message' in err) {
+    return String((err as { message: string }).message) || 'Something went wrong.';
+  }
+  return 'Something went wrong.';
 };
 
-let settingsHooks: {
-  onSignIn: () => void;
-  onSignOut: () => void;
-  getUserLabel: () => { label: string; isAnonymous: boolean };
-} = {
-  onSignIn: () => {},
-  onSignOut: () => {},
-  getUserLabel: () => ({ label: 'Guest', isAnonymous: true }),
-};
-
-let leaderboardOpener: () => void = () => {};
-
-export const setSettingsHooks = (hooks: typeof settingsHooks) => {
-  settingsHooks = hooks;
-};
-
-export const setLeaderboardOpener = (fn: () => void) => {
-  leaderboardOpener = fn;
+const userLabel = (): { label: string; isAnonymous: boolean } => {
+  if (!firebaseEnabled()) return { label: 'Guest (offline)', isAnonymous: true };
+  const { user, profile } = getAuthState();
+  if (!user) return { label: 'Connecting…', isAnonymous: true };
+  const label = profile?.displayName || (user.isAnonymous ? 'Guest' : 'Player');
+  return { label, isAnonymous: user.isAnonymous };
 };
 
 const openSettings = () => {
   hideOverlay();
-  const { label, isAnonymous } = settingsHooks.getUserLabel();
+  const { label, isAnonymous } = userLabel();
   showSettings({
     audio: isAudioEnabled(),
     haptics: isHapticsEnabled(),
@@ -228,26 +250,90 @@ const openSettings = () => {
     onToggleAudio: (v) => {
       setAudioEnabled(v);
       savePref(AUDIO_KEY, v);
+      if (firebaseEnabled()) void updatePreferences({ sound: v }).catch(() => {});
     },
     onToggleHaptics: (v) => {
       setHapticsEnabled(v);
       savePref(HAPTICS_KEY, v);
+      if (firebaseEnabled()) void updatePreferences({ haptics: v }).catch(() => {});
     },
-    onSignIn: () => settingsHooks.onSignIn(),
-    onSignOut: () => settingsHooks.onSignOut(),
+    onSignIn: () => openSignIn('signup'),
+    onSignOut: () => {
+      void signOutAndReanon();
+      toast('Signed out. Playing as guest.');
+    },
+  });
+};
+
+const openSignIn = (mode: 'signin' | 'signup') => {
+  if (!firebaseEnabled()) {
+    toast('Sign-in isn\'t configured yet.');
+    return;
+  }
+  hideOverlay();
+  showSignIn({
+    initialMode: mode,
+    onGoogle: async () => {
+      await upgradeWithGoogle();
+      toast('Signed in. Welcome!');
+    },
+    onEmailSignUp: async (email, password) => {
+      await upgradeWithEmail(email, password);
+      toast('Account created. Verification email sent.');
+    },
+    onEmailSignIn: async (email, password) => {
+      await signInWithEmail(email, password);
+      toast('Welcome back!');
+    },
+    onPasswordReset: async (email) => {
+      await resetPassword(email);
+    },
   });
 };
 
 const openLeaderboard = () => {
   hideOverlay();
-  leaderboardOpener();
+  if (!firebaseEnabled()) {
+    toast('Leaderboard isn\'t configured yet.');
+    return;
+  }
+  const { user } = getAuthState();
+  showLeaderboard({
+    initialScope: 'today',
+    fetcher: (scope) => fetchLeaderboard(scope, user?.uid ?? null, state.best),
+  });
 };
 
-export const boot = () => {
+const syncFromAuth = () => {
+  const { profile, isReady } = getAuthState();
+  if (!isReady || !profile) return;
+  let needsBestPush = false;
+  if (profile.bestScore > state.best) {
+    state.best = profile.bestScore;
+    saveBest(state.best);
+    renderScore(state);
+  } else if (state.best > profile.bestScore) {
+    needsBestPush = true;
+  }
+  if (profile.preferences.sound !== isAudioEnabled()) {
+    setAudioEnabled(profile.preferences.sound);
+    savePref(AUDIO_KEY, profile.preferences.sound);
+  }
+  if (profile.preferences.haptics !== isHapticsEnabled()) {
+    setHapticsEnabled(profile.preferences.haptics);
+    savePref(HAPTICS_KEY, profile.preferences.haptics);
+  }
+  if (needsBestPush) {
+    void updateBestScoreIfHigher(state.best).catch(() => {});
+  }
+};
+
+const boot = () => {
   initRender();
   setAudioEnabled(loadPref(AUDIO_KEY, true));
   setHapticsEnabled(loadPref(HAPTICS_KEY, true));
   state = newGameState(loadBest());
+  gameStartBest = state.best;
   renderBoard(state);
   renderScore(state);
   wireTray();
@@ -266,6 +352,11 @@ export const boot = () => {
     },
     { passive: false },
   );
+
+  if (firebaseEnabled()) {
+    onAuth(() => syncFromAuth());
+    void initAuth();
+  }
 };
 
 boot();

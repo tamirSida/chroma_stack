@@ -257,24 +257,28 @@ export const signOutAndReanon = async (): Promise<void> => {
 };
 
 export const updatePreferences = async (patch: Partial<Preferences>): Promise<void> => {
-  if (!state.user || !state.profile) return;
-  const next: Preferences = { ...state.profile.preferences, ...patch };
-  state = { ...state, profile: { ...state.profile, preferences: next } };
+  const user = state.user;
+  const profile = state.profile;
+  if (!user || !profile) return;
+  const next: Preferences = { ...profile.preferences, ...patch };
+  state = { ...state, profile: { ...profile, preferences: next } };
   emit();
   try {
-    await saveProfile(state.user.uid, { preferences: next });
+    await saveProfile(user.uid, { preferences: next });
   } catch {
     /* no-op; local change still in memory */
   }
 };
 
 export const updateBestScoreIfHigher = async (score: number): Promise<void> => {
-  if (!state.user || !state.profile) return;
-  if (score <= state.profile.bestScore) return;
-  state = { ...state, profile: { ...state.profile, bestScore: score } };
+  const user = state.user;
+  const profile = state.profile;
+  if (!user || !profile) return;
+  if (score <= profile.bestScore) return;
+  state = { ...state, profile: { ...profile, bestScore: score } };
   emit();
   try {
-    await saveProfile(state.user.uid, { bestScore: score });
+    await saveProfile(user.uid, { bestScore: score });
   } catch {
     /* no-op */
   }
