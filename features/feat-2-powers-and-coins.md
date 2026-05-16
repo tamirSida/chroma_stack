@@ -22,7 +22,7 @@ devices.
 | **Redo** | 50 | Restores the board, tray, score, combo, and coin balance to immediately before your last placement. Only the most recent move is recoverable; a second tap is a no-op until you place again. |
 | **Shuffle pieces** | 80 | Re-rolls all three tray pieces (any already-used slot stays empty). |
 | **Shuffle board** | 100 | Keeps every filled cell in place but re-colors them with fresh random colors. Same shape, new color distribution → instant mono-line opportunities. |
-| **Color line** | 120 | Player picks a row OR column (1–8) and a color. The **already-filled** cells in that line are recoloured to the chosen color. Empty cells stay empty. The power does *not* auto-complete the line — it sets up a future mono-clear by aligning the colors of existing blocks. If the chosen line is entirely empty, the action is refused and no coins are spent. |
+| **Color line** | 120 | Tap the Paint power → a slim targeting toolbar replaces the powers row (axis toggle + 4 color swatches + cancel). Tap any cell on the board → its row or column (per the axis toggle) is recoloured. **Only already-filled cells are repainted**; empty cells stay empty. The power does *not* auto-complete the line — it sets up a future mono-clear by aligning the colors of existing blocks. If the tapped line has no filled cells, a toast appears and no coins are spent. |
 | **Clear board** | 250 | Wipes every filled cell. Tray, score, combo, coin balance untouched. Nuclear reset. |
 
 A "power store" view is unnecessary: the five power buttons sit under the
@@ -41,8 +41,12 @@ effect immediately — purchase and use are one action.
 - New `<div id="powers" class="powers">` row in [index.html](../index.html),
   rendered by `render.ts`'s `renderPowers(state, onUse)`. The handler is
   wired in `main.ts`.
-- A small modal in `ui/overlays.ts` (`showColorLinePicker`) collects row/col
-  + color for the Color-line power.
+- A slim **targeting toolbar** (`#targeting-bar` in
+  [index.html](../index.html), rendered by `showTargetingBar` in
+  [render.ts](../src/render.ts)) replaces the powers row while the Paint
+  power is active. The toolbar holds the axis toggle and color swatches; the
+  row/column index comes from the cell the player taps on the board.
+  Cancelling restores the powers row and clears no coins.
 
 ## Psych / UX reasoning
 

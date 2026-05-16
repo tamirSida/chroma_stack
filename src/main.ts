@@ -12,6 +12,9 @@ import {
   animateClear,
   spawnFloat,
   setNearMiss,
+  showTargetingBar,
+  hideTargetingBar,
+  type TargetingState,
 } from './render';
 import { initInput, handleTrayPointerDown } from './input';
 import {
@@ -30,7 +33,6 @@ import { primeAudio, playClearSequence, playBad, setAudioEnabled, isAudioEnabled
 import { buzz, setHapticsEnabled, isHapticsEnabled } from './haptics';
 import {
   hideOverlay,
-  showColorLinePicker,
   showGameOver,
   showLeaderboard,
   showSettings,
@@ -133,6 +135,7 @@ const earnCoinsFromScoreDelta = (delta: number) => {
 const wireTray = () => {
   renderTray(state, (idx, e) => {
     if (busy) return;
+    if (paintTargeting) return;
     handleTrayPointerDown(idx, e);
   });
 };
@@ -149,18 +152,7 @@ const handlePower = (id: PowerId) => {
   const def = POWER_BY_ID.get(id)!;
 
   if (id === 'colorLine') {
-    showColorLinePicker({
-      onConfirm: (axis, index, color) => {
-        if (!canUse(state, id)) return;
-        const ok = applyPower(state, id, { axis, index, color });
-        if (!ok) {
-          toast(`That ${axis} has no blocks to recolor.`);
-          return;
-        }
-        afterPowerUse(id, def.cost);
-        runClearsIfAny();
-      },
-    });
+    enterPaintTargeting();
     return;
   }
 
@@ -179,6 +171,45 @@ const handlePower = (id: PowerId) => {
   if (id === 'clearBoard' || id === 'shuffleBoard') {
     runClearsIfAny();
   }
+};
+
+let paintTargeting: TargetingState | null = null;
+
+const enterPaintTargeting = () => {
+  if (!canUse(state, 'colorLine')) return;
+  paintTargeting = { axis: 'row', color: 'r' };
+  showTargetingBar(paintTargeting, {
+    onAxisChange: (axis) => {
+      if (paintTargeting) paintTargeting.axis = axis;
+    },
+    onColorChange: (color) => {
+      if (paintTargeting) paintTargeting.color = color;
+    },
+    onCancel: () => exitPaintTargeting(),
+  });
+};
+
+const exitPaintTargeting = () => {
+  paintTargeting = null;
+  hideTargetingBar();
+};
+
+const handleBoardCellTap = (r: number, c: number) => {
+  if (!paintTargeting) return;
+  if (!canUse(state, 'colorLine')) {
+    exitPaintTargeting();
+    return;
+  }
+  const { axis, color } = paintTargeting;
+  const ok = applyPower(state, 'colorLine', { axis, index: axis === 'row' ? r : c, color });
+  if (!ok) {
+    toast(`That ${axis} has no blocks to recolor.`);
+    return;
+  }
+  const def = POWER_BY_ID.get('colorLine')!;
+  exitPaintTargeting();
+  afterPowerUse('colorLine', def.cost);
+  runClearsIfAny();
 };
 
 const afterPowerUse = (id: PowerId, deducted: number) => {
@@ -513,6 +544,16 @@ const boot = () => {
 
   document.getElementById('btn-settings')?.addEventListener('click', openSettings);
   document.getElementById('btn-leaderboard')?.addEventListener('click', openLeaderboard);
+
+  document.getElementById('board')?.addEventListener('click', (e) => {
+    if (!paintTargeting) return;
+    const cell = (e.target as HTMLElement | null)?.closest<HTMLElement>('.cell');
+    if (!cell) return;
+    const r = Number(cell.dataset['r']);
+    const c = Number(cell.dataset['c']);
+    if (Number.isNaN(r) || Number.isNaN(c)) return;
+    handleBoardCellTap(r, c);
+  });
 
   document.addEventListener('contextmenu', (e) => e.preventDefault());
   document.addEventListener('gesturestart', (e) => e.preventDefault());

@@ -26,10 +26,10 @@ body {
 }
 
 :root {
-  --cell: min(11vw, 11vh, 64px);
+  --cell: min(10vw, 8.8vh, 56px);
   --gap: 3px;
   --board: calc(var(--cell) * 8 + var(--gap) * 7);
-  --tray-cell: calc(var(--cell) * 0.72);
+  --tray-cell: calc(var(--cell) * 0.62);
   --tray-gap: 2px;
   --c-r: #ff4d6d;
   --c-b: #4dabf7;
@@ -53,19 +53,30 @@ button {
 
 #app {
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 12px;
+  grid-template-rows: auto 1fr auto auto;
+  grid-template-areas:
+    "top"
+    "board"
+    "tray"
+    "powers";
+  gap: 6px;
   width: 100%;
   height: 100%;
   padding:
-    calc(var(--safe-top) + 12px)
-    calc(var(--safe-right) + 12px)
-    calc(var(--safe-bottom) + 12px)
-    calc(var(--safe-left) + 12px);
+    calc(var(--safe-top) + 6px)
+    calc(var(--safe-right) + 8px)
+    calc(var(--safe-bottom) + 6px)
+    calc(var(--safe-left) + 8px);
   max-width: 520px;
   margin: 0 auto;
   position: relative;
 }
+
+.topbar { grid-area: top; }
+.board-wrap { grid-area: board; }
+.tray { grid-area: tray; }
+.powers { grid-area: powers; }
+.targeting-bar { grid-area: powers; }
 
 .topbar {
   display: grid;
@@ -90,7 +101,7 @@ button {
 }
 
 .score {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   transition: color 0.2s, transform 0.2s;
@@ -116,7 +127,7 @@ button {
 
 .combo {
   text-align: center;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -168,19 +179,13 @@ button {
   line-height: 1;
 }
 
-.bottom {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .powers {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
-  padding: 6px;
+  gap: 4px;
+  padding: 4px;
   background: rgba(0, 0, 0, 0.18);
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .power-btn {
@@ -188,14 +193,14 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  min-height: 56px;
-  padding: 6px 4px;
-  border-radius: 10px;
+  gap: 1px;
+  min-height: 44px;
+  padding: 4px 2px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.9);
   font-weight: 600;
-  font-size: 10px;
+  font-size: 9px;
   transition: transform 0.1s, background 0.15s, opacity 0.15s;
 }
 
@@ -210,12 +215,12 @@ button {
 }
 
 .power-btn .power-icon {
-  font-size: 20px;
+  font-size: 16px;
   line-height: 1;
 }
 
 .power-btn .power-label {
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 0.02em;
   line-height: 1.1;
 }
@@ -224,7 +229,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 10px;
+  font-size: 9px;
   color: var(--c-y);
   font-variant-numeric: tabular-nums;
 }
@@ -243,67 +248,52 @@ button {
   100% { background: rgba(255, 255, 255, 0.06); }
 }
 
-.color-line-picker {
+.targeting-bar {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(110, 231, 255, 0.4);
+  border-radius: 12px;
+  min-height: 44px;
 }
 
-.segmented {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  background: rgba(0, 0, 0, 0.2);
-  padding: 4px;
-  border-radius: 10px;
-}
+.targeting-bar[hidden] { display: none; }
 
-.segmented button {
-  padding: 10px;
+.targeting-bar .axis {
+  display: inline-flex;
+  background: rgba(0, 0, 0, 0.25);
   border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.6);
-  min-height: 40px;
+  padding: 2px;
+  gap: 2px;
 }
 
-.segmented button.active {
+.targeting-bar .axis button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.02em;
+  min-height: 32px;
+}
+
+.targeting-bar .axis button.active {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
 
-.index-picker {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
+.targeting-bar .swatches {
+  display: inline-flex;
   gap: 4px;
 }
 
-.index-picker button {
-  aspect-ratio: 1;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
-  font-weight: 700;
-  font-size: 14px;
-  min-height: 36px;
-  font-variant-numeric: tabular-nums;
-}
-
-.index-picker button.active {
-  background: var(--accent);
-  color: #0e0e1a;
-}
-
-.color-swatches {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-
-.color-swatch {
-  aspect-ratio: 1;
-  border-radius: 10px;
+.targeting-bar .swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   border: 2px solid transparent;
-  min-height: 44px;
   background:
     linear-gradient(
       180deg,
@@ -313,29 +303,54 @@ button {
   transition: transform 0.1s, border-color 0.15s;
 }
 
-.color-swatch.active {
+.targeting-bar .swatch.active {
   border-color: #fff;
-  transform: scale(1.05);
+  transform: scale(1.1);
 }
 
-.picker-label {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  font-weight: 600;
+.targeting-bar .hint {
+  flex: 1;
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+  text-align: center;
+  line-height: 1.15;
 }
 
-.icon-btn {
-  width: 44px;
-  height: 44px;
+.targeting-bar .cancel {
+  width: 32px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.targeting-bar .cancel:active { background: rgba(255, 255, 255, 0.14); }
+
+.board.targeting {
+  cursor: crosshair;
+}
+
+.board.targeting .cell:hover {
+  box-shadow: inset 0 0 0 1px rgba(110, 231, 255, 0.6);
+}
+
+
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.85);
-  font-size: 20px;
+  font-size: 16px;
   transition: background 0.15s, transform 0.15s;
 }
 
@@ -459,14 +474,14 @@ button {
 .tray {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   justify-items: center;
-  padding: 6px;
+  padding: 4px;
   background: rgba(0, 0, 0, 0.18);
-  border-radius: 14px;
+  border-radius: 12px;
   touch-action: none;
-  min-height: calc(var(--cell) * 3 + 16px);
+  min-height: calc(var(--cell) * 2.7 + 8px);
 }
 
 .tray-slot {
@@ -474,7 +489,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: calc(var(--cell) * 3);
+  height: calc(var(--cell) * 2.7);
   position: relative;
 }
 
@@ -864,7 +879,33 @@ button {
   min-height: 1.3em;
 }
 
-@media (orientation: landscape) and (min-width: 700px) {
-  :root { --cell: min(7vw, 9vh, 64px); }
-  #app { max-width: 480px; }
+@media (min-width: 720px) {
+  :root { --cell: min(7vw, 9vh, 60px); }
+  #app {
+    grid-template-rows: auto 1fr auto;
+    grid-template-columns: 92px 1fr;
+    grid-template-areas:
+      "top top"
+      "powers board"
+      "powers tray";
+    column-gap: 16px;
+    row-gap: 10px;
+    max-width: 720px;
+  }
+  .powers {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(5, auto);
+    align-self: center;
+    padding: 6px;
+    gap: 6px;
+  }
+  .power-btn {
+    min-height: 62px;
+    padding: 6px 4px;
+    gap: 2px;
+    font-size: 10px;
+  }
+  .power-btn .power-icon { font-size: 20px; }
+  .power-btn .power-label { font-size: 10px; }
+  .power-btn .power-cost { font-size: 10px; }
 }

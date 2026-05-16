@@ -2,6 +2,7 @@ import {
   BOARD_SIZE,
   cellKey,
   parseKey,
+  COLORS,
   type Color,
   type GameState,
   type Piece,
@@ -16,6 +17,7 @@ let comboEl: HTMLElement;
 let coinsEl: HTMLElement;
 let coinsNumEl: HTMLElement;
 let powersEl: HTMLElement;
+let targetingEl: HTMLElement;
 
 const cellEls: HTMLElement[][] = [];
 let activeParticles = 0;
@@ -31,6 +33,7 @@ export const initRender = () => {
   coinsEl = document.getElementById('coins')!;
   coinsNumEl = document.getElementById('coins-num')!;
   powersEl = document.getElementById('powers')!;
+  targetingEl = document.getElementById('targeting-bar')!;
   mountBoard();
 };
 
@@ -185,6 +188,76 @@ export const flashPower = (id: PowerId) => {
   void btn.offsetWidth;
   btn.classList.add('flash');
   setTimeout(() => btn.classList.remove('flash'), 420);
+};
+
+export type TargetingState = { axis: 'row' | 'col'; color: Color };
+
+export const showTargetingBar = (
+  initial: TargetingState,
+  handlers: {
+    onAxisChange: (axis: 'row' | 'col') => void;
+    onColorChange: (color: Color) => void;
+    onCancel: () => void;
+  },
+) => {
+  targetingEl.innerHTML = '';
+  targetingEl.hidden = false;
+  powersEl.hidden = true;
+  boardEl.classList.add('targeting');
+
+  const axisWrap = document.createElement('div');
+  axisWrap.className = 'axis';
+  const axisBtns: { axis: 'row' | 'col'; el: HTMLButtonElement }[] = [];
+  for (const axis of ['row', 'col'] as const) {
+    const b = document.createElement('button');
+    b.textContent = axis === 'row' ? 'Row' : 'Col';
+    if (axis === initial.axis) b.classList.add('active');
+    b.addEventListener('click', () => {
+      axisBtns.forEach((x) => x.el.classList.toggle('active', x.axis === axis));
+      handlers.onAxisChange(axis);
+      hint.textContent = `Tap a ${axis} on the board`;
+    });
+    axisBtns.push({ axis, el: b });
+    axisWrap.appendChild(b);
+  }
+  targetingEl.appendChild(axisWrap);
+
+  const swatchWrap = document.createElement('div');
+  swatchWrap.className = 'swatches';
+  const swatchBtns: { color: Color; el: HTMLButtonElement }[] = [];
+  for (const color of COLORS) {
+    const s = document.createElement('button');
+    s.className = 'swatch';
+    s.style.setProperty('--c', `var(--c-${color})`);
+    s.setAttribute('aria-label', color);
+    if (color === initial.color) s.classList.add('active');
+    s.addEventListener('click', () => {
+      swatchBtns.forEach((x) => x.el.classList.toggle('active', x.color === color));
+      handlers.onColorChange(color);
+    });
+    swatchBtns.push({ color, el: s });
+    swatchWrap.appendChild(s);
+  }
+  targetingEl.appendChild(swatchWrap);
+
+  const hint = document.createElement('div');
+  hint.className = 'hint';
+  hint.textContent = `Tap a ${initial.axis} on the board`;
+  targetingEl.appendChild(hint);
+
+  const cancel = document.createElement('button');
+  cancel.className = 'cancel';
+  cancel.setAttribute('aria-label', 'Cancel');
+  cancel.textContent = '×';
+  cancel.addEventListener('click', handlers.onCancel);
+  targetingEl.appendChild(cancel);
+};
+
+export const hideTargetingBar = () => {
+  targetingEl.hidden = true;
+  targetingEl.innerHTML = '';
+  powersEl.hidden = false;
+  boardEl.classList.remove('targeting');
 };
 
 export const flashScore = () => {
