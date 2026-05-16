@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    match /leaderboard_alltime/{uid} {
+      allow read: if true;
+
+      allow create: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.data.uid == uid
+                    && request.resource.data.score is int
+                    && request.resource.data.score >= 0
+                    && request.resource.data.score <= 1000000
+                    && request.resource.data.displayName is string
+                    && request.resource.data.displayName.size() <= 40;
+
+      allow update: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.data.score is int
+                    && request.resource.data.score > resource.data.score
+                    && request.resource.data.score <= 1000000
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['score', 'achievedAt', 'displayName', 'day']);
+
+      allow delete: if false;
+    }
+
+    match /leaderboard_daily/{uid} {
+      allow read: if true;
+
+      allow create: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.data.uid == uid
+                    && request.resource.data.score is int
+                    && request.resource.data.score >= 0
+                    && request.resource.data.score <= 1000000
+                    && request.resource.data.displayName is string
+                    && request.resource.data.displayName.size() <= 40
+                    && request.resource.data.day is string
+                    && request.resource.data.day.size() == 10;
+
+      allow update: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.data.score <= 1000000
+                    && (
+                         request.resource.data.day != resource.data.day
+                         || request.resource.data.score > resource.data.score
+                       )
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['score', 'achievedAt', 'displayName', 'day']);
+
+      allow delete: if false;
+    }
+  }
+}
