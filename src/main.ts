@@ -130,12 +130,12 @@ const commitPlace = (idx: number, r: number, c: number) => {
 
     const steps = Math.min(
       8,
-      1 + result.fullRows.length + result.fullCols.length + result.clusters.length,
+      1 + result.fullRows.length + result.fullCols.length + result.monoLines,
     );
     playClearSequence(steps);
-    buzz(state.combo >= 3 ? [20, 30, 20] : 10);
-    spawnFloat(state.combo);
-    if (state.combo >= 3) shakeBoard();
+    buzz(state.combo >= 3 || result.monoLines > 0 ? [20, 30, 20] : 10);
+    spawnFloat(state.combo, result.monoLines);
+    if (state.combo >= 3 || result.monoLines > 0) shakeBoard();
 
     busy = true;
     const finalizeClear = animateClear(result.cells, colorMap);

@@ -32,13 +32,11 @@ export type GameState = {
   pieceCounter: number;
 };
 
-export type ClusterInfo = { color: Color; size: number };
-
 export type ClearResult = {
   cells: Set<string>;
   fullRows: number[];
   fullCols: number[];
-  clusters: ClusterInfo[];
+  monoLines: number;
 };
 
 export type NearMissReport = {

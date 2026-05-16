@@ -262,14 +262,25 @@ const spawnParticles = (r: number, c: number, color: Color) => {
 
 const FLOAT_TIERS = ['Good!', 'Nice!', 'Sweet!', 'Amazing!', 'Insane!', 'Godlike!'];
 
-export const spawnFloat = (combo: number) => {
-  const idx = Math.min(FLOAT_TIERS.length - 1, Math.max(0, combo - 1));
-  const text = FLOAT_TIERS[idx]!;
+export const spawnFloat = (combo: number, monoLines = 0) => {
+  let text: string;
+  let color: string;
+  if (monoLines >= 2) {
+    text = `PURE × ${monoLines}!`;
+    color = 'var(--c-y)';
+  } else if (monoLines === 1) {
+    text = 'PURE!';
+    color = 'var(--c-y)';
+  } else {
+    const idx = Math.min(FLOAT_TIERS.length - 1, Math.max(0, combo - 1));
+    text = FLOAT_TIERS[idx]!;
+    color = combo >= 5 ? 'var(--c-r)' : combo >= 3 ? 'var(--c-y)' : '#fff';
+  }
   const el = document.createElement('div');
   el.className = 'float';
   el.textContent = text;
-  el.style.fontSize = `${28 + Math.min(combo, 6) * 2}px`;
-  el.style.color = combo >= 5 ? 'var(--c-r)' : combo >= 3 ? 'var(--c-y)' : '#fff';
+  el.style.fontSize = `${28 + Math.min(combo + monoLines, 6) * 2}px`;
+  el.style.color = color;
   boardEl.appendChild(el);
   const anim = el.animate(
     [

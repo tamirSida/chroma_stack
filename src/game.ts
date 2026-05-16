@@ -3,6 +3,7 @@ import {
   type Board,
   type Cell,
   type ClearResult,
+  type Color,
   type GameState,
   type NearMissReport,
   type Piece,
@@ -68,87 +69,59 @@ export const placeOnBoard = (
   }
 };
 
-const NEIGHBORS: ReadonlyArray<readonly [number, number]> = [
-  [1, 0],
-  [-1, 0],
-  [0, 1],
-  [0, -1],
-];
-
 export const detectClears = (board: Board): ClearResult => {
   const cells = new Set<string>();
   const fullRows: number[] = [];
   const fullCols: number[] = [];
-  const clusters: ClearResult['clusters'] = [];
+  let monoLines = 0;
 
   for (let r = 0; r < BOARD_SIZE; r++) {
     let full = true;
+    let firstColor: Color | null = null;
+    let mono = true;
     for (let c = 0; c < BOARD_SIZE; c++) {
-      if (board[r]![c] === null) {
+      const cell = board[r]![c];
+      if (cell === null) {
         full = false;
         break;
       }
+      if (firstColor === null) firstColor = cell.color;
+      else if (cell.color !== firstColor) mono = false;
     }
     if (full) {
       fullRows.push(r);
+      if (mono) monoLines++;
       for (let c = 0; c < BOARD_SIZE; c++) cells.add(cellKey(r, c));
     }
   }
 
   for (let c = 0; c < BOARD_SIZE; c++) {
     let full = true;
+    let firstColor: Color | null = null;
+    let mono = true;
     for (let r = 0; r < BOARD_SIZE; r++) {
-      if (board[r]![c] === null) {
+      const cell = board[r]![c];
+      if (cell === null) {
         full = false;
         break;
       }
+      if (firstColor === null) firstColor = cell.color;
+      else if (cell.color !== firstColor) mono = false;
     }
     if (full) {
       fullCols.push(c);
+      if (mono) monoLines++;
       for (let r = 0; r < BOARD_SIZE; r++) cells.add(cellKey(r, c));
     }
   }
 
-  const visited = new Set<string>();
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      const cell = board[r]![c];
-      const key = cellKey(r, c);
-      if (!cell || visited.has(key)) continue;
-      const component: [number, number][] = [];
-      const queue: [number, number][] = [[r, c]];
-      while (queue.length) {
-        const [cr, cc] = queue.shift()!;
-        const k = cellKey(cr, cc);
-        if (visited.has(k)) continue;
-        const cur = board[cr]![cc];
-        if (!cur || cur.color !== cell.color) continue;
-        visited.add(k);
-        component.push([cr, cc]);
-        for (const [dr, dc] of NEIGHBORS) {
-          const nr = cr + dr;
-          const nc = cc + dc;
-          if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
-          if (visited.has(cellKey(nr, nc))) continue;
-          queue.push([nr, nc]);
-        }
-      }
-      if (component.length >= 3) {
-        clusters.push({ color: cell.color, size: component.length });
-        for (const [cr, cc] of component) cells.add(cellKey(cr, cc));
-      }
-    }
-  }
-
-  return { cells, fullRows, fullCols, clusters };
+  return { cells, fullRows, fullCols, monoLines };
 };
 
 export const scoreClears = (result: ClearResult, combo: number): number => {
   let base = result.cells.size * 10;
   base += (result.fullRows.length + result.fullCols.length) * 50;
-  for (const cl of result.clusters) {
-    if (cl.size > 3) base += (cl.size - 3) * 15;
-  }
+  base += result.monoLines * 150;
   return base * combo;
 };
 
@@ -205,43 +178,6 @@ export const findNearMiss = (board: Board): NearMissReport => {
     if (filled === BOARD_SIZE - 1 && emptyAt >= 0) {
       cells.add(cellKey(emptyAt, c));
       nearLines++;
-    }
-  }
-
-  const visited = new Set<string>();
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      const cell = board[r]![c];
-      const key = cellKey(r, c);
-      if (!cell || visited.has(key)) continue;
-      const component: [number, number][] = [];
-      const queue: [number, number][] = [[r, c]];
-      while (queue.length) {
-        const [cr, cc] = queue.shift()!;
-        const k = cellKey(cr, cc);
-        if (visited.has(k)) continue;
-        const cur = board[cr]![cc];
-        if (!cur || cur.color !== cell.color) continue;
-        visited.add(k);
-        component.push([cr, cc]);
-        for (const [dr, dc] of NEIGHBORS) {
-          const nr = cr + dr;
-          const nc = cc + dc;
-          if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
-          if (visited.has(cellKey(nr, nc))) continue;
-          queue.push([nr, nc]);
-        }
-      }
-      if (component.length === 2) {
-        for (const [cr, cc] of component) {
-          for (const [dr, dc] of NEIGHBORS) {
-            const nr = cr + dr;
-            const nc = cc + dc;
-            if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
-            if (board[nr]![nc] === null) cells.add(cellKey(nr, nc));
-          }
-        }
-      }
     }
   }
 
