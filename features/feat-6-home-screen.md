@@ -1,6 +1,6 @@
 # feat-6: home screen (banner + login or guest flow)
 
-**Version:** 0.6.1
+**Version:** 0.6.2
 **Status:** shipped
 **Date:** 2026-05-16
 
@@ -122,6 +122,51 @@ as a generic auth button to most players and converts ~30% worse on
 mobile sign-in flows in published industry studies (Google Identity
 Services team, 2021 web sign-in guidelines). The icon is the recognition
 hook that makes the button feel like one tap, not one decision.
+
+## v0.6.2 — remember signed-in users, skip the home screen for them
+
+Firebase Auth already persists the user across browser sessions via
+`browserLocalPersistence` (the default). On boot, `onAuthStateChanged`
+fires within ~100–500 ms with the cached user — no re-sign-in needed.
+The friction was that **the home screen was always shown**, so a
+returning signed-in player had to tap "Play as guest" (or sign in
+again) every visit. That made the persistence invisible.
+
+The fix is a tiny wait-and-decide step on boot:
+
+- `presentHomeIfNeeded()` (in [main.ts](../src/main.ts)) awaits
+  `waitForAuthReady(900)` — a promise that resolves when
+  `onAuthStateChanged` reports `isReady: true`, or after 900 ms,
+  whichever first.
+- If the resolved user is **non-anonymous** (Google or email/password),
+  the home screen never mounts. A toast shows `Welcome back, <name>`
+  and the game is immediately playable.
+- If the user is anonymous, missing, or Firebase is disabled, the
+  home screen appears as before.
+
+The 900 ms ceiling guarantees the screen-blank window stays inside
+human-imperceptible-latency budget. In practice the auth listener
+fires in under 200 ms for cached sessions, so the actual blank time
+is much smaller.
+
+**Reversing the earlier "always show home" call.** The original
+feat-6 doc explicitly chose to always show the home screen to avoid
+a race condition with auth state loading and a visual flash. With
+`waitForAuthReady` resolving against `isReady`, the race is no longer
+an issue — we wait for the truth before deciding what to render. And
+since the home screen never mounts in the first place for signed-in
+users, there's no flash to dismiss.
+
+**For new devices** (player signed in on phone A, opens on laptop B
+with no persisted session), Firebase has no cached user → home shows
+normally. The persistence is per-browser, which matches how Google
+and most web apps behave.
+
+**Anonymous users still see home.** Reason: an anonymous Firebase UID
+is fragile (iOS Safari ITP rotates them every 7+ days). If we
+auto-skipped anonymous users they'd never see the sign-in CTA again
+even after their UID rotated and their cloud progress vanished. The
+home screen is their nudge to upgrade.
 
 ## Files
 

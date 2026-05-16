@@ -664,10 +664,41 @@ const boot = () => {
     void initAuth();
   }
 
-  showHome({
-    firebaseEnabled: firebaseEnabled(),
-    onChoice: handleHomeChoice,
+  void presentHomeIfNeeded();
+};
+
+const waitForAuthReady = (timeoutMs: number): Promise<void> =>
+  new Promise<void>((resolve) => {
+    let done = false;
+    let unsubscribe: (() => void) | null = null;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      unsubscribe?.();
+      window.clearTimeout(to);
+      resolve();
+    };
+    unsubscribe = onAuth((s) => {
+      if (s.isReady) finish();
+    });
+    const to = window.setTimeout(finish, timeoutMs);
   });
+
+const presentHomeIfNeeded = async () => {
+  if (!firebaseEnabled()) {
+    showHome({ firebaseEnabled: false, onChoice: handleHomeChoice });
+    return;
+  }
+
+  await waitForAuthReady(900);
+  const { user, profile } = getAuthState();
+  if (user && !user.isAnonymous) {
+    const name = profile?.displayName || user.displayName || 'back';
+    toast(`Welcome back, ${name}`);
+    return;
+  }
+
+  showHome({ firebaseEnabled: true, onChoice: handleHomeChoice });
 };
 
 const startGame = () => {
