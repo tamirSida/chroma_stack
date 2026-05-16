@@ -153,7 +153,10 @@ const handlePower = (id: PowerId) => {
       onConfirm: (axis, index, color) => {
         if (!canUse(state, id)) return;
         const ok = applyPower(state, id, { axis, index, color });
-        if (!ok) return;
+        if (!ok) {
+          toast(`That ${axis} has no blocks to recolor.`);
+          return;
+        }
         afterPowerUse(id, def.cost);
         runClearsIfAny();
       },

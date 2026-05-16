@@ -85,15 +85,23 @@ export const applyPower = (
       const p = params as ColorLineParams | undefined;
       if (!p) return false;
       if (p.index < 0 || p.index >= BOARD_SIZE) return false;
+      let touched = 0;
       if (p.axis === 'row') {
         for (let c = 0; c < BOARD_SIZE; c++) {
-          state.board[p.index]![c] = { color: p.color };
+          if (state.board[p.index]![c] !== null) {
+            state.board[p.index]![c] = { color: p.color };
+            touched++;
+          }
         }
       } else {
         for (let r = 0; r < BOARD_SIZE; r++) {
-          state.board[r]![p.index] = { color: p.color };
+          if (state.board[r]![p.index] !== null) {
+            state.board[r]![p.index] = { color: p.color };
+            touched++;
+          }
         }
       }
+      if (touched === 0) return false;
       state.coins -= def.cost;
       state.snapshot = null;
       break;

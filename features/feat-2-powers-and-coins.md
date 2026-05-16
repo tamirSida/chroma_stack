@@ -22,7 +22,7 @@ devices.
 | **Redo** | 50 | Restores the board, tray, score, combo, and coin balance to immediately before your last placement. Only the most recent move is recoverable; a second tap is a no-op until you place again. |
 | **Shuffle pieces** | 80 | Re-rolls all three tray pieces (any already-used slot stays empty). |
 | **Shuffle board** | 100 | Keeps every filled cell in place but re-colors them with fresh random colors. Same shape, new color distribution → instant mono-line opportunities. |
-| **Color line** | 120 | Player picks a row OR column (1–8) and a color. That entire line is overwritten in the chosen color, triggering an immediate (and likely monochromatic) clear. |
+| **Color line** | 120 | Player picks a row OR column (1–8) and a color. The **already-filled** cells in that line are recoloured to the chosen color. Empty cells stay empty. The power does *not* auto-complete the line — it sets up a future mono-clear by aligning the colors of existing blocks. If the chosen line is entirely empty, the action is refused and no coins are spent. |
 | **Clear board** | 250 | Wipes every filled cell. Tray, score, combo, coin balance untouched. Nuclear reset. |
 
 A "power store" view is unnecessary: the five power buttons sit under the
@@ -70,11 +70,17 @@ Five distinct effects, three loops:
      keeps it special.
 
 3. **Agency over the central twist** (Color line).
-   The mono-line bonus is the game's identity. Letting the player *buy
-   their way into* a guaranteed mono line is the strongest possible
-   confirmation that "color matters." It also creates a teach-by-doing
-   moment: a new player who tries Color-line once gets a visceral feel
-   for the bonus and starts hunting natural mono-lines without prompting.
+   The mono-line bonus is the game's identity. Color-line is a **setup**
+   power, not a payout: it aligns the colors of blocks the player has
+   already placed, but the player still has to land a piece in the gap
+   to trigger the clear. That preserves skill expression — you can't
+   buy your way to easy points; you buy *better odds* on the points
+   you were about to earn anyway. The teach-by-doing moment is still
+   there: a player who recolours a 7/8 row red and then drops a red
+   cell into the last slot gets a deliberate mono clear and immediately
+   internalises that "matching colors is worth chasing." Refusing the
+   purchase when the line is empty prevents the obvious newbie trap
+   ("I paid 120 coins and nothing happened").
 
 **Coin earning rate.** 0.1 coins per point is calibrated so:
 - A clean game ending at ~500 points earns ~50 coins → exactly one Redo.

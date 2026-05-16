@@ -1,0 +1,34 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: Score
+      - generic [ref=e6]: "0"
+      - generic [ref=e7]: Best 560
+    - generic [ref=e8]: ×1
+    - generic [ref=e9]:
+      - generic "Coins" [ref=e10]:
+        - generic [ref=e11]: ●
+        - generic [ref=e12]: "436"
+      - button "Leaderboard" [ref=e13] [cursor=pointer]: 🏆
+      - button "Settings" [ref=e14] [cursor=pointer]: ⚙
+  - generic [ref=e100]:
+    - button "Undo (50 coins)":
+      - generic: ↶
+      - generic: Undo
+      - generic: ● 50
+    - button "Reroll (80 coins)" [ref=e101] [cursor=pointer]:
+      - generic [ref=e102]: 🎲
+      - generic [ref=e103]: Reroll
+      - generic [ref=e104]: ● 80
+    - button "Recolor (100 coins)" [ref=e105] [cursor=pointer]:
+      - generic [ref=e106]: 🎨
+      - generic [ref=e107]: Recolor
+      - generic [ref=e108]: ● 100
+    - button "Paint (120 coins)" [ref=e109] [cursor=pointer]:
+      - generic [ref=e110]: ⚡
+      - generic [ref=e111]: Paint
+      - generic [ref=e112]: ● 120
+    - button "Wipe (250 coins)" [ref=e113] [cursor=pointer]:
+      - generic [ref=e114]: 💥
+      - generic [ref=e115]: Wipe
+      - generic [ref=e116]: ● 250

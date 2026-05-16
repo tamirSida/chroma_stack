@@ -577,7 +577,7 @@ export const showColorLinePicker = (args: ColorLinePickerArgs) => {
   card.appendChild(close);
 
   const title = document.createElement('h2');
-  title.textContent = 'Paint a line';
+  title.textContent = 'Recolor a line';
   title.style.textAlign = 'center';
   card.appendChild(title);
 
@@ -585,7 +585,7 @@ export const showColorLinePicker = (args: ColorLinePickerArgs) => {
   sub.className = 'muted';
   sub.style.textAlign = 'center';
   sub.style.marginBottom = '14px';
-  sub.textContent = 'Overwrites the chosen row or column';
+  sub.textContent = 'Repaints existing blocks in the row or column. Empty cells stay empty.';
   card.appendChild(sub);
 
   const wrap = document.createElement('div');
