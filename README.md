@@ -149,7 +149,8 @@ npm run preview          # serve the production build locally
 | 3 | Adrenaline-tuned audio | [feat-3](features/feat-3-adrenaline-audio.md) | 0.3.1 |
 | 4 | Arcade background music | [feat-4](features/feat-4-bgm.md) | 0.4.2 |
 | 5 | High-variance score multipliers | [feat-5](features/feat-5-score-multipliers.md) | 0.5.0 |
-| 6 | Home screen (banner + login or guest) | [feat-6](features/feat-6-home-screen.md) | 0.6.1 |
+| 6 | Home screen (banner + login or guest) | [feat-6](features/feat-6-home-screen.md) | 0.6.2 |
+| 7 | UX polish — paint targeting + score prominence | [feat-7](features/feat-7-ux-polish.md) | 0.7.0 |
 
 ## Bot / video recording
 

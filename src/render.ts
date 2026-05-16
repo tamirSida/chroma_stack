@@ -130,8 +130,54 @@ export const snapBackTray = (idx: number) => {
   setTimeout(() => piece.classList.remove('snap-back'), 260);
 };
 
+let displayedScore = 0;
+let scoreAnim: number | null = null;
+let bumpTimer: number | null = null;
+
+const animateScoreTo = (target: number) => {
+  if (target === displayedScore) {
+    scoreEl.textContent = String(target);
+    return;
+  }
+  if (scoreAnim !== null) cancelAnimationFrame(scoreAnim);
+  const from = displayedScore;
+  const diff = Math.abs(target - from);
+  const duration = Math.min(700, 200 + diff * 0.4);
+  const startTime = performance.now();
+  const step = (now: number) => {
+    const t = Math.min(1, (now - startTime) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const current = Math.round(from + (target - from) * eased);
+    scoreEl.textContent = String(current);
+    if (t < 1) {
+      scoreAnim = requestAnimationFrame(step);
+    } else {
+      scoreAnim = null;
+      displayedScore = target;
+    }
+  };
+  scoreAnim = requestAnimationFrame(step);
+};
+
+const bumpScore = () => {
+  scoreEl.classList.remove('bump');
+  void scoreEl.offsetWidth;
+  scoreEl.classList.add('bump');
+  if (bumpTimer !== null) window.clearTimeout(bumpTimer);
+  bumpTimer = window.setTimeout(() => {
+    scoreEl.classList.remove('bump');
+    bumpTimer = null;
+  }, 480);
+};
+
 export const renderScore = (state: GameState) => {
-  scoreEl.textContent = String(state.score);
+  if (state.score > displayedScore) bumpScore();
+  if (state.score < displayedScore) {
+    displayedScore = state.score;
+    scoreEl.textContent = String(state.score);
+  } else {
+    animateScoreTo(state.score);
+  }
   bestEl.textContent = `Best ${state.best}`;
   comboEl.textContent = `×${state.combo}`;
   comboEl.classList.remove('hot', 'hotter');
@@ -202,7 +248,7 @@ export const showTargetingBar = (
 ) => {
   targetingEl.innerHTML = '';
   targetingEl.hidden = false;
-  powersEl.hidden = true;
+  powersEl.classList.add('disabled');
   boardEl.classList.add('targeting');
 
   const axisWrap = document.createElement('div');
@@ -256,7 +302,7 @@ export const showTargetingBar = (
 export const hideTargetingBar = () => {
   targetingEl.hidden = true;
   targetingEl.innerHTML = '';
-  powersEl.hidden = false;
+  powersEl.classList.remove('disabled');
   boardEl.classList.remove('targeting');
 };
 
